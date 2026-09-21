@@ -1,0 +1,69 @@
+cff-version: 1.2.0
+title: >-
+  SICA: Session-continuity invariant analysis for detecting
+  intra-session web session hijacking
+message: >-
+  If you use this software or its benchmark construction, please cite it using
+  the metadata in this file. NOTE: the author and repository fields below are
+  placeholders and MUST be completed before this repository is published or
+  cited. No DOI has been assigned and no publication venue is claimed.
+type: software
+
+# ---------------------------------------------------------------------------
+# PLACEHOLDER — replace before publishing.
+#
+# The Citation File Format requires at least one author, so a placeholder entry
+# is present to keep this file valid. It is deliberately obvious rather than
+# plausible: inventing a name, ORCID or affiliation would be worse than leaving
+# the field visibly unfinished.
+# ---------------------------------------------------------------------------
+authors:
+  - name: "PLACEHOLDER — replace with the author name before publication"
+    # given-names:
+    # family-names:
+    # email:
+    # affiliation:
+    # orcid: "https://orcid.org/0000-0000-0000-0000"
+
+abstract: >-
+  SICA detects intra-session web session hijacking server-side, at constant cost
+  per request, by checking a small set of declared session-continuity invariants
+  against bounded per-session state. It uses no machine learning and requires no
+  attack-labelled training data: invariant weights and the alerting threshold are
+  derived from attack-free calibration traffic alone, under a declared
+  session-level false-alarm budget. The evaluation uses real public web-server
+  access logs as the traffic substrate, with controlled session-hijacking
+  injection in which attacker requests are real requests taken verbatim from a
+  different real client of the same server. The reported adversary envelope spans
+  six masquerade levels, including two co-located cases in which the attacker
+  presents the victim's own network address, so that the benchmark measures
+  hijack detection rather than address-change detection.
+
+keywords:
+  - session hijacking
+  - web session security
+  - session integrity
+  - intrusion detection
+  - anomaly detection
+  - non-machine-learning detection
+  - explainable security
+  - web server logs
+
+license: MIT
+license-url: "https://opensource.org/licenses/MIT"
+
+# The two input access logs under data/raw/ are NOT covered by the MIT licence
+# above. They are public sample logs from the Elastic Examples repository,
+# redistributed unmodified under the Apache License 2.0. See
+# CITATION_OF_INPUTS.txt and LICENSE-APACHE-2.0.txt.
+
+# ---------------------------------------------------------------------------
+# Deliberately omitted rather than invented:
+#   doi              no DOI has been assigned
+#   repository-code  no public repository exists yet
+#   url              no project page exists yet
+#   version          no release has been tagged
+#   date-released    nothing has been released
+#   preferred-citation  no paper has been published or accepted
+# Add each field only when the corresponding fact is true.
+# ---------------------------------------------------------------------------

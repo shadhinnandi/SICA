@@ -1,0 +1,11 @@
+== E4a adversary grid
+  wrote results/tables/e4_scenario_grid_runs.csv  (400 rows)
+  wrote results/tables/e4_scenario_grid.csv  (20 rows)
+  wrote results/tables/e4_scenario_baselines_runs.csv  (4400 rows)
+  wrote results/tables/e4_scenario_baselines.csv  (220 rows)
+   done in 401.8s
+== E4b assumption sweeps
+  wrote results/tables/e4_sweep_runs.csv  (1320 rows)
+  wrote results/tables/e4_sweeps.csv  (66 rows)
+   done in 861.8s
+== E4c address-churn crossover against baselines

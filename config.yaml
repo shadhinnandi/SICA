@@ -1,0 +1,154 @@
+# =============================================================================
+# DESCRIPTIVE MIRROR OF THE FROZEN STUDY CONFIGURATION — NOT AUTHORITATIVE
+# =============================================================================
+#
+# READ THIS FIRST.
+#
+# *** No code loads this file. ***  Nothing in sica/, pipeline/ or tests/ parses
+# it, and editing a value here changes nothing about how the experiments run.
+#
+# The executable source of truth is:
+#
+#     pipeline/common.py      study constants (seeds, alpha, workloads, rates)
+#     sica/invariants.py      the invariant set and its severities
+#     sica/monitor.py         MonitorConfig defaults
+#     sica/inject.py          InjectionConfig defaults, masquerade levels
+#     sica/churn.py           ChurnConfig defaults
+#     sica/calibrate.py       weighting and applicability floors
+#
+# This file exists only so that the frozen configuration can be read in one
+# place without tracing six modules.  Every value below was transcribed from the
+# live code on 2026-09-13 and verified against it.  If this file and the code
+# ever disagree, **the code is correct and this file is stale** — please report
+# it rather than editing the code to match.
+#
+# Methodological authority rests with docs/EXPERIMENT_CONTRACT.md; the frozen
+# state is recorded in docs/ARCHITECTURE_FREEZE.md and docs/DATASET_FREEZE.md.
+#
+# Values marked "development" were settled on the disjoint development seed
+# block (100-119) and were not revisited on the reporting seeds.  Values marked
+# "assumption" cannot be measured from the available logs; each is swept across
+# its plausible range in E4 and reported as a curve rather than as a point.
+# -----------------------------------------------------------------------------
+
+meta:
+  authoritative: false
+  executable_source_of_truth: pipeline/common.py
+  transcribed_from_code_on: 2026-09-13
+  loaded_by_any_code: false
+
+study:
+  name: session-continuity invariants for intra-session hijack detection
+  reporting_seeds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+                    15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]
+  development_seeds: [100, 101, 102, 103, 104, 105, 106, 107, 108, 109,
+                      110, 111, 112, 113, 114, 115, 116, 117, 118, 119]
+  # Per-experiment seed usage actually implemented:
+  #   E1 main, E2 baselines .......... seeds 0-29
+  #   E1b false-alarm-budget sweep ... seeds 0-14   (SEEDS[:15] in exp02_main.py)
+  #   E3, E4, E5 ..................... seeds 0-19   (SEEDS[:20])
+  #   E6 efficiency .................. no seed; deterministic replay
+
+workloads:
+  W1_web:
+    file: data/raw/apache_sample_1.log
+    dialect: combined
+    role: primary
+    description: >-
+      Apache combined access log; human web browsing.  Public sample log from the
+      Elastic Examples repository (Apache-2.0), redistributed unmodified.
+    sha256: f15c31e905f86c7b4b6ab44aee74d0a2086dce89f010187d983edea7ef0364ef
+  W2_apt:
+    file: data/raw/nginx_real.log
+    dialect: combined
+    role: secondary
+    description: >-
+      Elastic Nginx demo/sample access-log corpus.  NOT production traffic and not
+      a real package mirror: its entire URL universe is three placeholder paths
+      (/downloads/product_1|2|3) and 65.8% of responses are 404.  Retained because
+      it is adversarial to the method (one dominant agent family, ~0% referrer
+      coverage).  The file name "nginx_real.log" is historical and misleading.
+    sha256: 526832433ab552466dc8623390fd92dc052b4f301b2eec94836a5c42a46937df
+
+sessionisation:
+  idle_seconds: 1800.0        # standard idle-timeout convention
+  min_requests: 7             # every retained session admits a theft point
+  client_identity: [remote_address, user_agent]   # ground truth only; the
+                                                  # detector sees a session id
+
+invariants:                   # sica/invariants.py :: InvariantParams
+  version_severity: 0.35      # browser major-version change only
+  host_severity: 0.15         # address change inside the same /24
+  subnet_severity: 0.45       # /24 change inside the same /16
+  t_settle: 300.0             # s; used by the rejected v4 only
+  rate_beta: 0.25             # used by the rejected v5 only
+  rate_warmup: 3
+  ewma_alpha: 0.3
+
+monitor:                      # sica/monitor.py :: MonitorConfig
+  # Retained set, selected on the development seeds by threshold-free ROC AUC
+  # required to agree across both workloads.  v4, v5 and v6 remain implemented
+  # and are restored one at a time in the E3 ablation.
+  retained_invariants: [V1_agent_mutation, V2_scope_discontinuity, V3_binding_fork]
+  rejected_invariants: [V4_transition_velocity, V5_rate_discontinuity, V6_navigation_break]
+  ring_size: 4                # distinct bindings remembered per session
+  path_window: 32             # in-session URLs remembered for the referrer rule (v6)
+  migrate_reference: true     # development
+  evidence: max               # development: "max" or "accumulator"
+  decay: 0.6                  # only used when evidence == accumulator
+
+calibration:                  # sica/calibrate.py, pipeline/common.py
+  alpha: 0.01                 # session-level false-alarm budget
+  alpha_grid: [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.10]
+  weighting: rarity           # surprisal of the benign firing mass
+  epsilon_floor: 0.01
+  applicability_floor: 0.01
+  site_host_min_share: 0.05
+  split: temporal             # temporal | client | random (all three reported in E5c)
+  calibration_share: 0.5
+  # Threshold rule: tau is the SMALLEST observed calibration session peak risk
+  # whose in-sample alarm rate satisfies alpha, under the deployed "peak >= tau"
+  # test.  A (1-alpha) quantile is NOT used: the risk statistic is coarse and
+  # heavily tied, and a quantile lands on a plateau that ">=" then admits whole.
+  threshold_rule: smallest_observed_value_meeting_budget
+
+benchmark:                    # sica/inject.py :: InjectionConfig, harness defaults
+  attack_rate: 0.20           # share of evaluation sessions targeted
+  attack_fraction: 0.40       # attacker share, CONCURRENT mode only
+  earliest_takeover: 0.25     # theft point, as a fraction of session length
+  latest_takeover: 0.50       # never moved after it is drawn
+  theft_delay_s: null         # null: drawn from U(0.5, 5.0) s per injection
+  min_attacker_requests: 3
+  max_attacker_requests: 40   # bounds the CONCURRENT share only; in a takeover
+                              # the share is fixed by the theft point
+  length_matched: true        # injected sessions keep the original request count
+  levels: [L0, L1, L2, L3, L4, L5]      # the full reported envelope
+  address_visible_levels: [L0, L1, L2, L3]   # attacker address differs from victim
+  colocated_levels: [L4, L5]                 # attacker presents the victim's address
+  modes: [takeover, concurrent]
+  # L4 and L5 are part of the reported envelope, not a separate appendix.  Every
+  # one of L0-L3 gives the attacker a different address, so restricting the
+  # envelope to them would make "alert on any address change" perfect by
+  # construction and reduce the benchmark to address-change detection.
+
+benign_churn:                 # assumption — swept in E4
+  monotone_rate: 0.15
+  flapping_rate: 0.05
+  host_share: 0.50            # new address, same /24
+  subnet_share: 0.30          # new /24, same /16
+  cross_scope_share: 0.20     # new /16
+
+limitations:
+  # Recorded here because they bound what any result from this configuration may
+  # claim.  See docs/DATASET_VERIFICATION.md section 6.
+  degenerate_timestamps: >-
+    The minute field of both source logs is degenerate (always 05 in W1; 05 or 06
+    in W2), so no sessionised session exceeds 59 seconds and every inter-arrival
+    time is an artefact of the upstream generator.  No claim about realistic
+    temporal behaviour may rest on this data, and detection latency in SECONDS is
+    not reportable.  Latency in attacker REQUESTS is unaffected, as is the
+    computational latency measured in E6.  The retained invariants read no
+    timestamp, gap or duration, so the detector itself is unaffected.
+  theft_delay_s_is_inert: >-
+    Because no session exceeds 59 s, the E4 theft_delay_s sweep (0/1/60/600 s)
+    cannot vary anything observable and is reported as inert.

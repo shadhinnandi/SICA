@@ -1,0 +1,244 @@
+=== preflight
+  python 3.11.15; inputs present
+=== tests
+..................................................                       [100%]
+=== exp01_corpus
+== E0 corpus audit
+  wrote results/tables/e0_corpus.csv  (2 rows)
+  wrote results/tables/e0_sessionisation_sensitivity.csv  (24 rows)
+  wrote results/tables/e0_agent_mix.csv  (12 rows)
+  wrote results/metadata/e0_sessionisation.json
+workload                                description         source_file  requests_parsed  unique_addresses  unique_scope16  unique_prefix24  unique_user_agents  unique_agent_cores  referrer_coverage  span_days  sessions  requests_in_sessions  requests_per_session_median  requests_per_session_mean  requests_per_session_p90  requests_per_session_max
+  W1_web   Human web browsing (Apache combined log) apache_sample_1.log            10000              1753            1276             1474                 558                  40           0.592700       3.46       254                  3874                          9.0                      15.25                      33.0                       108
+  W2_apt Package-manager clients (Nginx access log)      nginx_real.log            51462              2660            1026             2254                 136                  22           0.000253      17.96      3126                 43307                         12.0                      13.85                      21.0                        83
+   done in 94.9s
+=== exp02_main
+== E1 main evaluation (30 seeds x 2 workloads)
+  wrote results/tables/e1_main_runs.csv  (60 rows)
+  wrote results/tables/e1_main_summary.csv  (2 rows)
+  wrote results/tables/e1_per_scenario.csv  (24 rows)
+  wrote results/tables/e1_false_alarms_by_benign_class.csv  (22 rows)
+  wrote results/tables/e1_calibration_runs.csv  (60 rows)
+  wrote results/tables/e1_calibration_summary.csv  (2 rows)
+   done in 82.9s
+== E1b false-alarm budget sweep
+  wrote results/tables/e1_alpha_sweep_runs.csv  (210 rows)
+  wrote results/tables/e1_alpha_sweep.csv  (14 rows)
+   done in 232.8s
+== E2 baseline comparison
+  wrote results/tables/e2_baseline_runs.csv  (660 rows)
+  wrote results/tables/e2_baselines.csv  (22 rows)
+   done in 92.2s
+
+--- main summary ---
+workload  n_runs  recall_mean  recall_sd  recall_ci_lo  recall_ci_hi  precision_mean  precision_sd  precision_ci_lo  precision_ci_hi  f1_mean    f1_sd  f1_ci_lo  f1_ci_hi  fpr_mean   fpr_sd  fpr_ci_lo  fpr_ci_hi  roc_auc_mean  roc_auc_sd  roc_auc_ci_lo  roc_auc_ci_hi
+  W1_web      30     0.357919   0.136839      0.311421      0.406962        0.906418      0.113686         0.865687         0.944749 0.496765 0.141384  0.448230  0.547069  0.008489 0.012968   0.004374   0.013411      0.883586    0.046863       0.866471       0.899549
+  W2_apt      30     0.229087   0.052790      0.210562      0.247160        0.920136      0.057349         0.900361         0.940320 0.362267 0.067161  0.338676  0.385123  0.005628 0.004093   0.004198   0.007028      0.851014    0.010238       0.847507       0.854677
+=== exp03_ablation
+== E3 ablation
+  wrote results/tables/e3_ablation_runs.csv  (660 rows)
+  wrote results/tables/e3_ablation.csv  (33 rows)
+workload        family                      variant  recall_mean  fpr_mean  f1_mean  roc_auc_mean
+  W1_web        design                  accumulator     0.105121  0.004728 0.174665      0.880085
+  W1_web        design                 no_migration     0.287439  0.007610 0.416915      0.885676
+  W1_web leave_one_out      minus_V1_agent_mutation     0.106972  0.006144 0.172592      0.830963
+  W1_web leave_one_out minus_V2_scope_discontinuity     0.474917  0.000000 0.636846      0.807341
+  W1_web leave_one_out        minus_V3_binding_fork     0.422538  0.004810 0.578036      0.886117
+  W1_web     reference                         full     0.348579  0.005144 0.490284      0.888800
+  W1_web      restored  plus_V4_transition_velocity     0.217170  0.003260 0.343137      0.885736
+  W1_web      restored   plus_V5_rate_discontinuity     0.253117  0.003723 0.364535      0.867677
+  W1_web      restored     plus_V6_navigation_break     0.344809  0.008091 0.480682      0.902282
+  W1_web      restored            plus_all_rejected     0.179910  0.004208 0.279009      0.885778
+  W1_web        single       only_V1_agent_mutation     0.468938  0.000000 0.630766      0.733823
+  W1_web        single  only_V2_scope_discontinuity     0.000000  0.000000 0.000000      0.810609
+  W1_web        single         only_V3_binding_fork     0.000000  0.000000 0.000000      0.637912
+  W1_web        single  only_V4_transition_velocity     0.039209  0.003260 0.066590      0.677557
+  W1_web        single   only_V5_rate_discontinuity     0.000000  0.000000 0.000000      0.537770
+  W1_web        single     only_V6_navigation_break     0.000000  0.000000 0.000000      0.631025
+  W1_web     weighting                equal_weights     0.292524  0.006144 0.414693      0.885543
+  W2_apt        design                  accumulator     0.080735  0.008879 0.142737      0.841271
+  W2_apt        design                 no_migration     0.126848  0.005980 0.218340      0.843772
+  W2_apt leave_one_out      minus_V1_agent_mutation     0.109695  0.006179 0.185532      0.820155
+  W2_apt leave_one_out minus_V2_scope_discontinuity     0.280245  0.000000 0.436867      0.748907
+  W2_apt leave_one_out        minus_V3_binding_fork     0.158861  0.004438 0.268604      0.844121
+  W2_apt     reference                         full     0.234403  0.006179 0.368691      0.850016
+  W2_apt      restored  plus_V4_transition_velocity     0.177660  0.009433 0.290159      0.849605
+  W2_apt      restored   plus_V5_rate_discontinuity     0.244575  0.008442 0.379895      0.800627
+  W2_apt      restored     plus_V6_navigation_break     0.234403  0.006179 0.368691      0.850016
+  W2_apt      restored            plus_all_rejected     0.173533  0.009834 0.284276      0.801400
+  W2_apt        single       only_V1_agent_mutation     0.216561  0.000000 0.354971      0.655094
+  W2_apt        single  only_V2_scope_discontinuity     0.000000  0.000000 0.000000      0.790804
+  W2_apt        single         only_V3_binding_fork     0.000000  0.000000 0.000000      0.664380
+  W2_apt        single  only_V4_transition_velocity     0.024998  0.007324 0.043966      0.657784
+  W2_apt        single   only_V5_rate_discontinuity     0.000000  0.000000 0.000000      0.494565
+  W2_apt     weighting                equal_weights     0.216221  0.006179 0.339406      0.848269
+   done in 767.8s
+=== exp05_leakage
+== E5a marginal-feature audit
+  wrote results/tables/e5_marginal_runs.csv  (320 rows)
+  wrote results/tables/e5_marginal_audit.csv  (16 rows)
+   done in 63.2s
+== E5b content-feature reference detector
+  wrote results/tables/e5_content_reference_runs.csv  (40 rows)
+  wrote results/tables/e5_content_reference.csv  (2 rows)
+   done in 52.3s
+== E5c split sensitivity
+  wrote results/tables/e5_split_runs.csv  (120 rows)
+  wrote results/tables/e5_split_sensitivity.csv  (6 rows)
+   done in 135.9s
+== E5d structural leakage checks
+  wrote results/metadata/leakage_report.json
+  [PASS] W1_web: session ids unique in corpus: 254 sessions, 254 distinct ids
+  [PASS] W1_web: duplicate requests within a session: 17 exact-duplicate request tuples (retained: repeated identical requests occur in real traffic)
+  [PASS] W1_web seed 0: calibration/evaluation session-disjoint: 0 shared session ids
+  [PASS] W1_web seed 0: calibration partition attack-free: 0 labelled sessions, 0 injected requests in calibration
+  [PASS] W1_web seed 0: injected sessions keep the original length: every injected session has the request count of its original
+  [PASS] W1_web seed 1: calibration/evaluation session-disjoint: 0 shared session ids
+  [PASS] W1_web seed 1: calibration partition attack-free: 0 labelled sessions, 0 injected requests in calibration
+  [PASS] W1_web seed 1: injected sessions keep the original length: every injected session has the request count of its original
+  [PASS] W1_web seed 2: calibration/evaluation session-disjoint: 0 shared session ids
+  [PASS] W1_web seed 2: calibration partition attack-free: 0 labelled sessions, 0 injected requests in calibration
+  [PASS] W1_web seed 2: injected sessions keep the original length: every injected session has the request count of its original
+  [PASS] W1_web: client-disjoint split isolates clients: 0 clients in both partitions
+  [PASS] W2_apt: session ids unique in corpus: 3126 sessions, 3126 distinct ids
+  [PASS] W2_apt: duplicate requests within a session: 4642 exact-duplicate request tuples (retained: repeated identical requests occur in real traffic)
+  [PASS] W2_apt seed 0: calibration/evaluation session-disjoint: 0 shared session ids
+  [PASS] W2_apt seed 0: calibration partition attack-free: 0 labelled sessions, 0 injected requests in calibration
+  [PASS] W2_apt seed 0: injected sessions keep the original length: every injected session has the request count of its original
+  [PASS] W2_apt seed 1: calibration/evaluation session-disjoint: 0 shared session ids
+  [PASS] W2_apt seed 1: calibration partition attack-free: 0 labelled sessions, 0 injected requests in calibration
+  [PASS] W2_apt seed 1: injected sessions keep the original length: every injected session has the request count of its original
+  [PASS] W2_apt seed 2: calibration/evaluation session-disjoint: 0 shared session ids
+  [PASS] W2_apt seed 2: calibration partition attack-free: 0 labelled sessions, 0 injected requests in calibration
+  [PASS] W2_apt seed 2: injected sessions keep the original length: every injected session has the request count of its original
+  [PASS] W2_apt: client-disjoint split isolates clients: 0 clients in both partitions
+  [PASS] development and reporting seed blocks are disjoint: reporting 0-29, development 100-119
+  [PASS] final invariant set consumes no timing or volume feature: retained invariants: V1_agent_mutation, V2_scope_discontinuity, V3_binding_fork -- none reads an inter-arrival gap, a byte count, a request count or a session duration, so any residual marginal signal in those quantities cannot reach the detector
+  26 passed, 0 failed
+   done in 9.2s
+workload        feature  n_runs  roc_auc_mean  roc_auc_sd  roc_auc_ci_lo  roc_auc_ci_hi
+  W1_web distinct_paths      20      0.535565    0.086330       0.499278       0.573141
+  W1_web     duration_s      20      0.449055    0.071391       0.418186       0.479076
+  W1_web     error_rate      20      0.522429    0.040724       0.505767       0.540752
+  W1_web     mean_bytes      20      0.588319    0.092331       0.547559       0.627090
+  W1_web   median_gap_s      20      0.369386    0.084790       0.334326       0.405590
+  W1_web      min_gap_s      20      0.442732    0.070650       0.412921       0.473515
+  W1_web     n_requests      20      0.553317    0.079538       0.520322       0.588097
+  W1_web    total_bytes      20      0.590373    0.097448       0.547665       0.630936
+  W2_apt distinct_paths      20      0.729199    0.017033       0.721973       0.736638
+  W2_apt     duration_s      20      0.486883    0.021023       0.477934       0.495896
+  W2_apt     error_rate      20      0.512856    0.015401       0.506448       0.519606
+  W2_apt     mean_bytes      20      0.516889    0.016101       0.510104       0.523743
+  W2_apt   median_gap_s      20      0.423413    0.016963       0.415704       0.430103
+  W2_apt      min_gap_s      20      0.493556    0.013642       0.487636       0.499155
+  W2_apt     n_requests      20      0.516324    0.017770       0.509058       0.523879
+  W2_apt    total_bytes      20      0.519541    0.017228       0.512416       0.527116
+=== exp06_efficiency
+== E6 efficiency
+  wrote results/tables/e6_efficiency.csv  (2 rows)
+  wrote results/tables/e6_scaling.csv  (10 rows)
+  wrote results/tables/e6_preparation_cost.csv  (2 rows)
+  wrote results/metadata/e6_environment.json
+workload  invariants  requests  live_sessions  throughput_req_per_s  throughput_req_per_s_min  throughput_req_per_s_max  us_per_request_uninstrumented  latency_us_median  latency_us_p95  latency_us_p99  latency_us_max  state_bytes_per_session  state_bytes_design_bound
+  W1_web           3      1993            127          58808.261934              58335.816434              59569.892820                      17.004413             15.874         23.2684         48.1830       75.868000              4712.055118                      2000
+  W2_apt           3     22007           1563          52006.973495              51055.277106              53433.702612                      19.228191             17.081         27.3947         52.1457      443.231001              3366.255918                      2000
+   done in 35.5s
+=== exp04_robustness
+== E4a adversary grid
+  wrote results/tables/e4_scenario_grid_runs.csv  (480 rows)
+  wrote results/tables/e4_scenario_grid.csv  (24 rows)
+  wrote results/tables/e4_scenario_baselines_runs.csv  (5280 rows)
+  wrote results/tables/e4_scenario_baselines.csv  (264 rows)
+   done in 749.7s
+== E4b assumption sweeps
+  wrote results/tables/e4_sweep_runs.csv  (1320 rows)
+  wrote results/tables/e4_sweeps.csv  (66 rows)
+   done in 1539.3s
+== E4c address-churn crossover against baselines
+  wrote results/tables/e4_crossover_runs.csv  (3080 rows)
+  wrote results/tables/e4_crossover.csv  (154 rows)
+   done in 445.2s
+workload level       mode  n_runs  recall_mean  recall_sd  recall_ci_lo  recall_ci_hi  fpr_mean   fpr_sd  fpr_ci_lo  fpr_ci_hi
+  W1_web    L0 concurrent      20     0.992951   0.024454      0.980639      1.000000  0.005085 0.008226   0.001860   0.008838
+  W1_web    L0   takeover      20     0.882463   0.076788      0.849494      0.913986  0.004778 0.007254   0.001916   0.008029
+  W1_web    L1 concurrent      20     0.699571   0.440506      0.509025      0.883608  0.005085 0.008226   0.001860   0.008838
+  W1_web    L1   takeover      20     0.002174   0.009722      0.000000      0.006522  0.004778 0.007254   0.001916   0.008029
+  W1_web    L2 concurrent      20     0.886285   0.078878      0.852294      0.920205  0.005088 0.007678   0.002221   0.008420
+  W1_web    L2   takeover      20     0.173192   0.355615      0.041667      0.343687  0.004795 0.007287   0.001923   0.008072
+  W1_web    L3 concurrent      20     0.014695   0.032932      0.003125      0.030139  0.004582 0.006964   0.001837   0.007734
+  W1_web    L3   takeover      20     0.002174   0.009722      0.000000      0.006522  0.004792 0.007275   0.001920   0.008061
+  W1_web    L4 concurrent      20     0.014969   0.033857      0.003030      0.030734  0.005085 0.008226   0.001860   0.008838
+  W1_web    L4   takeover      20     0.002174   0.009722      0.000000      0.006522  0.004778 0.007254   0.001916   0.008029
+  W1_web    L5 concurrent      20     0.890923   0.071437      0.858123      0.919847  0.005085 0.008226   0.001860   0.008838
+  W1_web    L5   takeover      20     0.002174   0.009722      0.000000      0.006522  0.004778 0.007254   0.001916   0.008029
+  W2_apt    L0 concurrent      20     0.892708   0.142596      0.827964      0.953195  0.006098 0.004078   0.004323   0.007810
+  W2_apt    L0   takeover      20     0.405183   0.016049      0.398373      0.412154  0.006180 0.004131   0.004384   0.007912
+  W2_apt    L1 concurrent      20     0.718130   0.415818      0.530382      0.901787  0.006098 0.004078   0.004323   0.007810
+  W2_apt    L1   takeover      20     0.001146   0.001910      0.000338      0.001979  0.006180 0.004131   0.004384   0.007912
+  W2_apt    L2 concurrent      20     0.405362   0.021725      0.396455      0.414554  0.006176 0.004153   0.004380   0.007912
+  W2_apt    L2   takeover      20     0.001136   0.001590      0.000484      0.001802  0.006180 0.004131   0.004384   0.007912
+  W2_apt    L3 concurrent      20     0.005487   0.004186      0.003666      0.007251  0.006209 0.004054   0.004443   0.007906
+  W2_apt    L3   takeover      20     0.001141   0.001903      0.000340      0.001964  0.006180 0.004131   0.004384   0.007912
+  W2_apt    L4 concurrent      20     0.006840   0.004857      0.004763      0.008935  0.006098 0.004078   0.004323   0.007810
+  W2_apt    L4   takeover      20     0.001146   0.001910      0.000338      0.001979  0.006180 0.004131   0.004384   0.007912
+  W2_apt    L5 concurrent      20     0.485335   0.026258      0.473952      0.496494  0.006138 0.004107   0.004366   0.007871
+  W2_apt    L5   takeover      20     0.001299   0.001935      0.000491      0.002130  0.006180 0.004131   0.004384   0.007912
+=== exp07_stats
+== E7 statistical analysis
+  wrote results/tables/e7_baseline_tests.csv  (20 rows)
+  wrote results/tables/e7_ablation_tests_leave_one_out.csv  (6 rows)
+  wrote results/tables/e7_ablation_tests_restored.csv  (8 rows)
+  wrote results/tables/e7_ablation_tests_single.csv  (11 rows)
+  wrote results/tables/e7_ablation_tests_weighting.csv  (2 rows)
+  wrote results/tables/e7_ablation_tests_design.csv  (4 rows)
+  wrote results/tables/e7_base_rate.csv  (12 rows)
+workload                                 comparison  n_pairs  f1_median_diff         f1_p  recall_median_diff     recall_p  fpr_median_diff        fpr_p  roc_auc_median_diff    roc_auc_p  balanced_accuracy_median_diff  balanced_accuracy_p    f1_p_holm  recall_p_holm   fpr_p_holm  roc_auc_p_holm  balanced_accuracy_p_holm
+  W1_web                  SICA (proposed) vs pin_ip       30       -0.080245 8.142980e-03           -0.388889 1.732216e-06        -0.145645 1.733307e-06                  NaN          NaN                      -0.122792         1.303852e-07 4.071490e-02   1.725686e-05 1.385773e-05    1.862645e-08              1.173466e-06
+  W1_web    SICA (proposed) vs pin_ip_and_useragent       30        0.023409 1.909295e-01           -0.043478 2.583686e-01        -0.042544 3.513152e-06                  NaN          NaN                      -0.003675         6.263463e-01 5.727886e-01   5.167371e-01 2.107891e-05    1.862645e-08              1.000000e+00
+  W1_web     SICA (proposed) vs pin_ip_or_useragent       30       -0.086538 1.886003e-04           -0.520870 1.726773e-06        -0.187593 1.862645e-09                  NaN          NaN                      -0.164235         1.862645e-09 1.131602e-03   1.725686e-05 1.862645e-08    1.862645e-08              1.862645e-08
+  W1_web            SICA (proposed) vs pin_prefix24       30       -0.070596 9.301122e-03           -0.182195 8.313053e-06        -0.063636 1.732216e-06                  NaN          NaN                      -0.068319         5.592592e-05 4.071490e-02   4.156527e-05 1.385773e-05    1.862645e-08              2.796296e-04
+  W1_web             SICA (proposed) vs pin_scope16       30        0.035189 5.439956e-01            0.000000 7.037087e-01        -0.019231 3.778681e-06                  NaN          NaN                       0.011748         6.732717e-01 5.727886e-01   7.037087e-01 2.107891e-05    1.862645e-08              1.000000e+00
+  W1_web           SICA (proposed) vs pin_useragent       30       -0.010428 2.129329e-01           -0.171569 1.512563e-05        -0.083723 1.862645e-09                  NaN          NaN                      -0.040726         8.718204e-04 5.727886e-01   6.050251e-05 1.862645e-08    1.862645e-08              2.615461e-03
+  W1_web      SICA (proposed) vs pin_useragent_core       30       -0.117879 5.304573e-05           -0.105263 2.084118e-04         0.000000 9.815398e-04                  NaN          NaN                      -0.055967         1.149442e-04 3.713201e-04   6.252355e-04 3.926159e-03    1.862645e-08              4.597769e-04
+  W1_web        SICA (proposed) vs score_burstiness       30        0.508065 1.732216e-06            0.360681 1.725686e-06         0.000000 9.815398e-04             0.399159 1.862645e-09                       0.174432         1.732216e-06 1.732216e-05   1.725686e-05 3.926159e-03    1.862645e-08              1.385773e-05
+  W1_web SICA (proposed) vs score_distinct_bindings       30        0.433990 1.733307e-06            0.340580 1.731126e-06         0.000000 9.815398e-04             0.071999 1.862645e-09                       0.156334         1.733307e-06 1.732216e-05   1.725686e-05 3.926159e-03    1.862645e-08              1.385773e-05
+  W1_web  SICA (proposed) vs score_max_request_rate       30        0.508065 1.732216e-06            0.360681 1.725686e-06         0.000000 9.815398e-04             0.338924 1.862645e-09                       0.174432         1.732216e-06 1.732216e-05   1.725686e-05 3.926159e-03    1.862645e-08              1.385773e-05
+  W2_apt                  SICA (proposed) vs pin_ip       30       -0.203862 1.862645e-09           -0.455159 1.862645e-09        -0.146576 1.862645e-09                  NaN          NaN                      -0.153375         1.862645e-09 1.862645e-08   1.862645e-08 1.862645e-08    1.862645e-08              1.862645e-08
+  W2_apt    SICA (proposed) vs pin_ip_and_useragent       30       -0.040006 9.220093e-06           -0.083051 2.848903e-06        -0.043246 1.862645e-09                  NaN          NaN                      -0.018455         4.421920e-06 1.844019e-05   5.697807e-06 1.862645e-08    1.862645e-08              8.843839e-06
+  W2_apt     SICA (proposed) vs pin_ip_or_useragent       30       -0.248358 1.862645e-09           -0.611791 1.862645e-09        -0.194235 1.862645e-09                  NaN          NaN                      -0.209238         1.862645e-09 1.862645e-08   1.862645e-08 1.862645e-08    1.862645e-08              1.862645e-08
+  W2_apt            SICA (proposed) vs pin_prefix24       30       -0.191335 1.862645e-09           -0.287353 1.862645e-09        -0.065926 1.862645e-09                  NaN          NaN                      -0.111667         1.862645e-09 1.862645e-08   1.862645e-08 1.862645e-08    1.862645e-08              1.862645e-08
+  W2_apt             SICA (proposed) vs pin_scope16       30       -0.077995 3.725290e-09           -0.094684 1.862645e-09        -0.023731 1.862645e-09                  NaN          NaN                      -0.035648         3.725290e-09 1.862645e-08   1.862645e-08 1.862645e-08    1.862645e-08              1.862645e-08
+  W2_apt           SICA (proposed) vs pin_useragent       30       -0.122259 1.862645e-09           -0.249194 1.862645e-09        -0.091739 1.862645e-09                  NaN          NaN                      -0.076744         1.862645e-09 1.862645e-08   1.862645e-08 1.862645e-08    1.862645e-08              1.862645e-08
+  W2_apt      SICA (proposed) vs pin_useragent_core       30        0.026563 5.027610e-01            0.030544 2.054097e-01         0.006354 5.956978e-05                  NaN          NaN                       0.010345         4.161299e-01 5.027610e-01   2.054097e-01 2.382791e-04    1.862645e-08              4.161299e-01
+  W2_apt        SICA (proposed) vs score_burstiness       30        0.384335 1.862645e-09            0.246265 1.733307e-06        -0.001586 3.125932e-03             0.386699 1.862645e-09                       0.124313         1.862645e-09 1.862645e-08   5.199920e-06 3.125932e-03    1.862645e-08              1.862645e-08
+  W2_apt SICA (proposed) vs score_distinct_bindings       30        0.336110 1.862645e-09            0.222792 1.862645e-09         0.006354 5.956978e-05             0.087235 1.862645e-09                       0.106739         1.862645e-09 1.862645e-08   1.862645e-08 2.382791e-04    1.862645e-08              1.862645e-08
+  W2_apt  SICA (proposed) vs score_max_request_rate       30        0.390619 1.862645e-09            0.249595 1.862645e-09         0.006354 5.956978e-05             0.346147 1.862645e-09                       0.121433         1.862645e-09 1.862645e-08   1.862645e-08 2.382791e-04    1.862645e-08              1.862645e-08
+   done in 0.5s
+=== make_tables
+== LaTeX tables
+  wrote paper/tables/corpus.tex
+  wrote paper/tables/main.tex
+  wrote paper/tables/scenarios.tex
+  wrote paper/tables/false_alarms.tex
+  wrote paper/tables/baselines.tex
+  wrote paper/tables/ablation.tex
+  wrote paper/tables/design_ablation.tex
+  wrote paper/tables/leakage.tex
+  wrote paper/tables/splits.tex
+  wrote paper/tables/efficiency.tex
+  wrote paper/tables/base_rate.tex
+   done in 0.2s
+Traceback (most recent call last):
+  File "the repository/pipeline/make_tables.py", line 338, in <module>
+    tbl_base_rate(); macros()
+                     ^^^^^^^^
+  File "the repository/pipeline/make_tables.py", line 295, in macros
+    m[f"stateKB{tag}"] = f"{eff.loc[wl].state_bytes_measured/1024:.1f}"
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/pandas/core/generic.py", line 6206, in __getattr__
+    return object.__getattribute__(self, name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Series' object has no attribute 'state_bytes_measured'
+
+FAILED at stage: make_tables
+see results/logs/make_tables.log

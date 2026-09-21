@@ -1,0 +1,39 @@
+== E4a adversary grid
+  wrote results/tables/e4_scenario_grid_runs.csv  (480 rows)
+  wrote results/tables/e4_scenario_grid.csv  (24 rows)
+  wrote results/tables/e4_scenario_baselines_runs.csv  (5280 rows)
+  wrote results/tables/e4_scenario_baselines.csv  (264 rows)
+   done in 749.7s
+== E4b assumption sweeps
+  wrote results/tables/e4_sweep_runs.csv  (1320 rows)
+  wrote results/tables/e4_sweeps.csv  (66 rows)
+   done in 1539.3s
+== E4c address-churn crossover against baselines
+  wrote results/tables/e4_crossover_runs.csv  (3080 rows)
+  wrote results/tables/e4_crossover.csv  (154 rows)
+   done in 445.2s
+workload level       mode  n_runs  recall_mean  recall_sd  recall_ci_lo  recall_ci_hi  fpr_mean   fpr_sd  fpr_ci_lo  fpr_ci_hi
+  W1_web    L0 concurrent      20     0.992951   0.024454      0.980639      1.000000  0.005085 0.008226   0.001860   0.008838
+  W1_web    L0   takeover      20     0.882463   0.076788      0.849494      0.913986  0.004778 0.007254   0.001916   0.008029
+  W1_web    L1 concurrent      20     0.699571   0.440506      0.509025      0.883608  0.005085 0.008226   0.001860   0.008838
+  W1_web    L1   takeover      20     0.002174   0.009722      0.000000      0.006522  0.004778 0.007254   0.001916   0.008029
+  W1_web    L2 concurrent      20     0.886285   0.078878      0.852294      0.920205  0.005088 0.007678   0.002221   0.008420
+  W1_web    L2   takeover      20     0.173192   0.355615      0.041667      0.343687  0.004795 0.007287   0.001923   0.008072
+  W1_web    L3 concurrent      20     0.014695   0.032932      0.003125      0.030139  0.004582 0.006964   0.001837   0.007734
+  W1_web    L3   takeover      20     0.002174   0.009722      0.000000      0.006522  0.004792 0.007275   0.001920   0.008061
+  W1_web    L4 concurrent      20     0.014969   0.033857      0.003030      0.030734  0.005085 0.008226   0.001860   0.008838
+  W1_web    L4   takeover      20     0.002174   0.009722      0.000000      0.006522  0.004778 0.007254   0.001916   0.008029
+  W1_web    L5 concurrent      20     0.890923   0.071437      0.858123      0.919847  0.005085 0.008226   0.001860   0.008838
+  W1_web    L5   takeover      20     0.002174   0.009722      0.000000      0.006522  0.004778 0.007254   0.001916   0.008029
+  W2_apt    L0 concurrent      20     0.892708   0.142596      0.827964      0.953195  0.006098 0.004078   0.004323   0.007810
+  W2_apt    L0   takeover      20     0.405183   0.016049      0.398373      0.412154  0.006180 0.004131   0.004384   0.007912
+  W2_apt    L1 concurrent      20     0.718130   0.415818      0.530382      0.901787  0.006098 0.004078   0.004323   0.007810
+  W2_apt    L1   takeover      20     0.001146   0.001910      0.000338      0.001979  0.006180 0.004131   0.004384   0.007912
+  W2_apt    L2 concurrent      20     0.405362   0.021725      0.396455      0.414554  0.006176 0.004153   0.004380   0.007912
+  W2_apt    L2   takeover      20     0.001136   0.001590      0.000484      0.001802  0.006180 0.004131   0.004384   0.007912
+  W2_apt    L3 concurrent      20     0.005487   0.004186      0.003666      0.007251  0.006209 0.004054   0.004443   0.007906
+  W2_apt    L3   takeover      20     0.001141   0.001903      0.000340      0.001964  0.006180 0.004131   0.004384   0.007912
+  W2_apt    L4 concurrent      20     0.006840   0.004857      0.004763      0.008935  0.006098 0.004078   0.004323   0.007810
+  W2_apt    L4   takeover      20     0.001146   0.001910      0.000338      0.001979  0.006180 0.004131   0.004384   0.007912
+  W2_apt    L5 concurrent      20     0.485335   0.026258      0.473952      0.496494  0.006138 0.004107   0.004366   0.007871
+  W2_apt    L5   takeover      20     0.001299   0.001935      0.000491      0.002130  0.006180 0.004131   0.004384   0.007912

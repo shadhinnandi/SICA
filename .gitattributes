@@ -1,0 +1,33 @@
+# Line endings -------------------------------------------------------------
+# Normalise text in the repository, check out native on each platform.
+* text=auto eol=lf
+
+# Keep shell scripts LF on every platform, or they will not execute.
+*.sh text eol=lf
+
+# Frozen scientific inputs --------------------------------------------------
+# The two benchmark corpora are byte-frozen and hash-verified against upstream
+# (see docs/DATASET_FREEZE.md). They must NEVER be line-ending normalised or
+# altered in transit, or their SHA-256 will change and reproducibility breaks.
+data/raw/*.log -text -diff
+
+# Generated scientific artefacts -------------------------------------------
+# Tracked deliberately as the evidence for the reported results, but there is
+# no value in diffing them line by line.
+results/tables/*.csv   -diff
+results/figures/*.pdf  binary
+results/figures/*.png  binary
+results/metadata/*.json -diff
+results_archive/**     -diff
+
+# Documents ----------------------------------------------------------------
+*.pdf binary
+
+# Language statistics -------------------------------------------------------
+# Stop GitHub reporting this as a "TeX" or "data" project: the contribution is
+# the Python detector and its evaluation pipeline.
+paper/IEEEtran.cls linguist-vendored
+paper/tables/*.tex linguist-generated
+results/**         linguist-generated
+results_archive/** linguist-generated
+data/raw/*.log     linguist-vendored

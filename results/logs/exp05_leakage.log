@@ -1,0 +1,59 @@
+== E5a marginal-feature audit
+  wrote results/tables/e5_marginal_runs.csv  (320 rows)
+  wrote results/tables/e5_marginal_audit.csv  (16 rows)
+   done in 63.2s
+== E5b content-feature reference detector
+  wrote results/tables/e5_content_reference_runs.csv  (40 rows)
+  wrote results/tables/e5_content_reference.csv  (2 rows)
+   done in 52.3s
+== E5c split sensitivity
+  wrote results/tables/e5_split_runs.csv  (120 rows)
+  wrote results/tables/e5_split_sensitivity.csv  (6 rows)
+   done in 135.9s
+== E5d structural leakage checks
+  wrote results/metadata/leakage_report.json
+  [PASS] W1_web: session ids unique in corpus: 254 sessions, 254 distinct ids
+  [PASS] W1_web: duplicate requests within a session: 17 exact-duplicate request tuples (retained: repeated identical requests occur in real traffic)
+  [PASS] W1_web seed 0: calibration/evaluation session-disjoint: 0 shared session ids
+  [PASS] W1_web seed 0: calibration partition attack-free: 0 labelled sessions, 0 injected requests in calibration
+  [PASS] W1_web seed 0: injected sessions keep the original length: every injected session has the request count of its original
+  [PASS] W1_web seed 1: calibration/evaluation session-disjoint: 0 shared session ids
+  [PASS] W1_web seed 1: calibration partition attack-free: 0 labelled sessions, 0 injected requests in calibration
+  [PASS] W1_web seed 1: injected sessions keep the original length: every injected session has the request count of its original
+  [PASS] W1_web seed 2: calibration/evaluation session-disjoint: 0 shared session ids
+  [PASS] W1_web seed 2: calibration partition attack-free: 0 labelled sessions, 0 injected requests in calibration
+  [PASS] W1_web seed 2: injected sessions keep the original length: every injected session has the request count of its original
+  [PASS] W1_web: client-disjoint split isolates clients: 0 clients in both partitions
+  [PASS] W2_apt: session ids unique in corpus: 3126 sessions, 3126 distinct ids
+  [PASS] W2_apt: duplicate requests within a session: 4642 exact-duplicate request tuples (retained: repeated identical requests occur in real traffic)
+  [PASS] W2_apt seed 0: calibration/evaluation session-disjoint: 0 shared session ids
+  [PASS] W2_apt seed 0: calibration partition attack-free: 0 labelled sessions, 0 injected requests in calibration
+  [PASS] W2_apt seed 0: injected sessions keep the original length: every injected session has the request count of its original
+  [PASS] W2_apt seed 1: calibration/evaluation session-disjoint: 0 shared session ids
+  [PASS] W2_apt seed 1: calibration partition attack-free: 0 labelled sessions, 0 injected requests in calibration
+  [PASS] W2_apt seed 1: injected sessions keep the original length: every injected session has the request count of its original
+  [PASS] W2_apt seed 2: calibration/evaluation session-disjoint: 0 shared session ids
+  [PASS] W2_apt seed 2: calibration partition attack-free: 0 labelled sessions, 0 injected requests in calibration
+  [PASS] W2_apt seed 2: injected sessions keep the original length: every injected session has the request count of its original
+  [PASS] W2_apt: client-disjoint split isolates clients: 0 clients in both partitions
+  [PASS] development and reporting seed blocks are disjoint: reporting 0-29, development 100-119
+  [PASS] final invariant set consumes no timing or volume feature: retained invariants: V1_agent_mutation, V2_scope_discontinuity, V3_binding_fork -- none reads an inter-arrival gap, a byte count, a request count or a session duration, so any residual marginal signal in those quantities cannot reach the detector
+  26 passed, 0 failed
+   done in 9.2s
+workload        feature  n_runs  roc_auc_mean  roc_auc_sd  roc_auc_ci_lo  roc_auc_ci_hi
+  W1_web distinct_paths      20      0.535565    0.086330       0.499278       0.573141
+  W1_web     duration_s      20      0.449055    0.071391       0.418186       0.479076
+  W1_web     error_rate      20      0.522429    0.040724       0.505767       0.540752
+  W1_web     mean_bytes      20      0.588319    0.092331       0.547559       0.627090
+  W1_web   median_gap_s      20      0.369386    0.084790       0.334326       0.405590
+  W1_web      min_gap_s      20      0.442732    0.070650       0.412921       0.473515
+  W1_web     n_requests      20      0.553317    0.079538       0.520322       0.588097
+  W1_web    total_bytes      20      0.590373    0.097448       0.547665       0.630936
+  W2_apt distinct_paths      20      0.729199    0.017033       0.721973       0.736638
+  W2_apt     duration_s      20      0.486883    0.021023       0.477934       0.495896
+  W2_apt     error_rate      20      0.512856    0.015401       0.506448       0.519606
+  W2_apt     mean_bytes      20      0.516889    0.016101       0.510104       0.523743
+  W2_apt   median_gap_s      20      0.423413    0.016963       0.415704       0.430103
+  W2_apt      min_gap_s      20      0.493556    0.013642       0.487636       0.499155
+  W2_apt     n_requests      20      0.516324    0.017770       0.509058       0.523879
+  W2_apt    total_bytes      20      0.519541    0.017228       0.512416       0.527116

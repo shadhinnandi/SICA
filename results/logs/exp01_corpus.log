@@ -1,0 +1,9 @@
+== E0 corpus audit
+  wrote results/tables/e0_corpus.csv  (2 rows)
+  wrote results/tables/e0_sessionisation_sensitivity.csv  (24 rows)
+  wrote results/tables/e0_agent_mix.csv  (12 rows)
+  wrote results/metadata/e0_sessionisation.json
+workload                                description         source_file  requests_parsed  unique_addresses  unique_scope16  unique_prefix24  unique_user_agents  unique_agent_cores  referrer_coverage  span_days  sessions  requests_in_sessions  requests_per_session_median  requests_per_session_mean  requests_per_session_p90  requests_per_session_max
+  W1_web   Human web browsing (Apache combined log) apache_sample_1.log            10000              1753            1276             1474                 558                  40           0.592700       3.46       254                  3874                          9.0                      15.25                      33.0                       108
+  W2_apt Package-manager clients (Nginx access log)      nginx_real.log            51462              2660            1026             2254                 136                  22           0.000253      17.96      3126                 43307                         12.0                      13.85                      21.0                        83
+   done in 94.9s

@@ -1,0 +1,26 @@
+  [PASS] leakage report: no failed structural check: 26 passed, 0 failed
+  [PASS] leakage: no marginal feature is decisive: largest deviation from chance: W2_apt/distinct_paths AUC 0.7292
+  [PASS] detector imports no machine-learning library: clean
+  [PASS] main summary covers both workloads: 2 rows
+  [PASS] W1_web: false-alarm rate within 3x of the 0.01 budget: measured 0.0085
+  [PASS] W1_web: ROC AUC in (0.5, 1.0): 0.8836
+  [PASS] W1_web: 30 reporting seeds: 30 runs
+  [PASS] W2_apt: false-alarm rate within 3x of the 0.01 budget: measured 0.0056
+  [PASS] W2_apt: ROC AUC in (0.5, 1.0): 0.8510
+  [PASS] W2_apt: 30 reporting seeds: 30 runs
+  [PASS] reporting seeds are 0-29 and disjoint from development seeds 100-119: seeds [np.int64(0), np.int64(1), np.int64(2)]...[np.int64(27), np.int64(28), np.int64(29)]
+  [PASS] paper macro file is populated: 94 macros
+  [PASS] no generated macro name contains a digit: letters only
+  [PASS] every generated macro used by the manuscript is defined: 51 referenced, all defined
+  [PASS] generated table bodies match their tabular column counts: all consistent
+  [PASS] adversary grid covers L0/L1/L2/L3/L4/L5 x both modes on both workloads: 24 cells, expected 24
+  [PASS] reported envelope includes the co-located levels: levels present: ['L0', 'L1', 'L2', 'L3', 'L4', 'L5']
+  [PASS] address pinning is not perfect by construction: pin_ip recall [0.7107, 0.6955]
+  [PASS] binary baselines report no ranking AUC: 0 pinning rows carry a ranking AUC
+  [PASS] binary baselines report their operating point: recall/FPR/precision/F1/balanced accuracy present
+  [PASS] every run meets its declared false-alarm budget on calibration: worst calibration alarm rate 0.0096 against alpha 0.01
+  [PASS] ablation removes each retained invariant: ['V1_agent_mutation', 'V2_scope_discontinuity', 'V3_binding_fork']
+  [PASS] ablation restores each rejected invariant: rejected=['V4_transition_velocity', 'V5_rate_discontinuity', 'V6_navigation_break'] restored=['V4_transition_velocity', 'V5_rate_discontinuity', 'V6_navigation_break', 'all_rejected']
+
+  70 passed, 0 failed
+  validation passed

@@ -1,0 +1,38 @@
+== E3 ablation
+  wrote results/tables/e3_ablation_runs.csv  (660 rows)
+  wrote results/tables/e3_ablation.csv  (33 rows)
+workload        family                      variant  recall_mean  fpr_mean  f1_mean  roc_auc_mean
+  W1_web        design                  accumulator     0.105121  0.004728 0.174665      0.880085
+  W1_web        design                 no_migration     0.287439  0.007610 0.416915      0.885676
+  W1_web leave_one_out      minus_V1_agent_mutation     0.106972  0.006144 0.172592      0.830963
+  W1_web leave_one_out minus_V2_scope_discontinuity     0.474917  0.000000 0.636846      0.807341
+  W1_web leave_one_out        minus_V3_binding_fork     0.422538  0.004810 0.578036      0.886117
+  W1_web     reference                         full     0.348579  0.005144 0.490284      0.888800
+  W1_web      restored  plus_V4_transition_velocity     0.217170  0.003260 0.343137      0.885736
+  W1_web      restored   plus_V5_rate_discontinuity     0.253117  0.003723 0.364535      0.867677
+  W1_web      restored     plus_V6_navigation_break     0.344809  0.008091 0.480682      0.902282
+  W1_web      restored            plus_all_rejected     0.179910  0.004208 0.279009      0.885778
+  W1_web        single       only_V1_agent_mutation     0.468938  0.000000 0.630766      0.733823
+  W1_web        single  only_V2_scope_discontinuity     0.000000  0.000000 0.000000      0.810609
+  W1_web        single         only_V3_binding_fork     0.000000  0.000000 0.000000      0.637912
+  W1_web        single  only_V4_transition_velocity     0.039209  0.003260 0.066590      0.677557
+  W1_web        single   only_V5_rate_discontinuity     0.000000  0.000000 0.000000      0.537770
+  W1_web        single     only_V6_navigation_break     0.000000  0.000000 0.000000      0.631025
+  W1_web     weighting                equal_weights     0.292524  0.006144 0.414693      0.885543
+  W2_apt        design                  accumulator     0.080735  0.008879 0.142737      0.841271
+  W2_apt        design                 no_migration     0.126848  0.005980 0.218340      0.843772
+  W2_apt leave_one_out      minus_V1_agent_mutation     0.109695  0.006179 0.185532      0.820155
+  W2_apt leave_one_out minus_V2_scope_discontinuity     0.280245  0.000000 0.436867      0.748907
+  W2_apt leave_one_out        minus_V3_binding_fork     0.158861  0.004438 0.268604      0.844121
+  W2_apt     reference                         full     0.234403  0.006179 0.368691      0.850016
+  W2_apt      restored  plus_V4_transition_velocity     0.177660  0.009433 0.290159      0.849605
+  W2_apt      restored   plus_V5_rate_discontinuity     0.244575  0.008442 0.379895      0.800627
+  W2_apt      restored     plus_V6_navigation_break     0.234403  0.006179 0.368691      0.850016
+  W2_apt      restored            plus_all_rejected     0.173533  0.009834 0.284276      0.801400
+  W2_apt        single       only_V1_agent_mutation     0.216561  0.000000 0.354971      0.655094
+  W2_apt        single  only_V2_scope_discontinuity     0.000000  0.000000 0.000000      0.790804
+  W2_apt        single         only_V3_binding_fork     0.000000  0.000000 0.000000      0.664380
+  W2_apt        single  only_V4_transition_velocity     0.024998  0.007324 0.043966      0.657784
+  W2_apt        single   only_V5_rate_discontinuity     0.000000  0.000000 0.000000      0.494565
+  W2_apt     weighting                equal_weights     0.216221  0.006179 0.339406      0.848269
+   done in 767.8s

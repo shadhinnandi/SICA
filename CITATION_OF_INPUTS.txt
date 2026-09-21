@@ -1,0 +1,86 @@
+Third-party files redistributed in this repository
+==================================================
+
+paper/IEEEtran.cls
+    IEEEtran LaTeX class, Michael Shell. Distributed under the LaTeX Project
+    Public License. Included so that the manuscript compiles without the
+    texlive-publishers package.
+
+
+Access logs (data/raw/)
+-----------------------
+
+Both log files are PUBLIC SAMPLE LOGS obtained from the Elastic Examples
+repository. They are redistributed here with their contents UNMODIFIED; the
+only change made is the file name.
+
+    Source repository : https://github.com/elastic/examples
+    License           : Apache License 2.0
+    License text      : https://raw.githubusercontent.com/elastic/examples/master/LICENSE
+    Verified          : 2026-09-12
+
+  data/raw/apache_sample_1.log
+      Upstream path : Common Data Formats/apache_logs/apache_logs
+      Upstream URL  : https://raw.githubusercontent.com/elastic/examples/master/Common%20Data%20Formats/apache_logs/apache_logs
+      SHA-256       : f15c31e905f86c7b4b6ab44aee74d0a2086dce89f010187d983edea7ef0364ef
+      Size          : 2,370,789 bytes; 10,000 records
+      Change made   : renamed from "apache_logs"; contents byte-identical to upstream
+
+  data/raw/nginx_real.log
+      Upstream path : Common Data Formats/nginx_logs/nginx_logs
+      Upstream URL  : https://raw.githubusercontent.com/elastic/examples/master/Common%20Data%20Formats/nginx_logs/nginx_logs
+      SHA-256       : 526832433ab552466dc8623390fd92dc052b4f301b2eec94836a5c42a46937df
+      Size          : 6,991,577 bytes; 51,462 records
+      Change made   : renamed from "nginx_logs"; contents byte-identical to upstream
+
+Both SHA-256 values were verified against the upstream files on 2026-09-12 and
+matched exactly, confirming that no truncation or transformation was applied
+before these files entered this project.
+
+
+What is and is not claimed about these logs
+-------------------------------------------
+
+These are PUBLIC SAMPLE LOGS, not PRODUCTION TRAFFIC. The distinction is
+deliberate and is maintained throughout this repository.
+
+The upstream repository describes both files only as sample files accompanying a
+getting-started example. It makes no claim that either is captured production
+traffic, and it documents nothing about how the traffic was collected, whether
+any consent was obtained, or whether it was anonymised. This project therefore
+claims nothing beyond "public sample log" about their origin. The provenance of
+the underlying real-world traffic is UNKNOWN.
+
+Two verified properties bound how these logs may be used, and both are corpus
+limitations rather than incidental details:
+
+  * Degenerate timestamps. The minute field is always "05" in apache_sample_1.log
+    and is "05" or "06" in nginx_real.log. Every sessionised session therefore
+    spans at most 59 seconds and all inter-arrival times are artefacts of the
+    upstream generator. No claim about realistic temporal behaviour may rest on
+    these files.
+
+  * nginx_real.log is demo data. Its entire URL universe is three placeholder
+    paths (/downloads/product_1, product_2, product_3) and 65.8% of its responses
+    are 404. Despite its file name it is not a real package mirror's logs.
+
+The Apache License 2.0 requires that this attribution, the license notice and a
+statement of changes accompany any redistribution. A copy of the license text is
+included at LICENSE-APACHE-2.0.txt.
+
+
+Personal data
+-------------
+
+Neither log carries authentication data, cookies, session identifiers,
+credentials or tokens; the authuser field is empty in all 61,462 records.
+
+Both carry CLIENT IP ADDRESSES, which are real, public and unmasked (1,753
+distinct in W1; 2,660 in W2). These are personal data in most jurisdictions. The
+logs are NOT anonymised and must not be described as such. See DATASET.md
+section 8 for the handling obligations that follow.
+
+W1 additionally contains 198 email-shaped strings, all of them crawler-operator
+contact addresses embedded in bot User-Agent strings (7 distinct addresses, the
+standard "Mozilla/5.0 (compatible; <bot>; <contact>)" convention). These are
+published contact points for automated agents, not end-user personal data.

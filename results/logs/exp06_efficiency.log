@@ -1,0 +1,9 @@
+== E6 efficiency
+  wrote results/tables/e6_efficiency.csv  (2 rows)
+  wrote results/tables/e6_scaling.csv  (10 rows)
+  wrote results/tables/e6_preparation_cost.csv  (2 rows)
+  wrote results/metadata/e6_environment.json
+workload  invariants  requests  live_sessions  throughput_req_per_s  throughput_req_per_s_min  throughput_req_per_s_max  us_per_request_uninstrumented  latency_us_median  latency_us_p95  latency_us_p99  latency_us_max  state_bytes_per_session  state_bytes_design_bound
+  W1_web           3      1993            127          58808.261934              58335.816434              59569.892820                      17.004413             15.874         23.2684         48.1830       75.868000              4712.055118                      2000
+  W2_apt           3     22007           1563          52006.973495              51055.277106              53433.702612                      19.228191             17.081         27.3947         52.1457      443.231001              3366.255918                      2000
+   done in 35.5s
