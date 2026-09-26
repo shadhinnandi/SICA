@@ -13,13 +13,13 @@ import numpy as np
 import pytest
 
 import sica
-from sica.calibrate import applicability, benign_rarity_weights, threshold_for_budget
-from sica.churn import ChurnConfig, apply_churn
+from sica.detector import applicability, benign_rarity_weights, threshold_for_budget
+from sica.benchmark import ChurnConfig, apply_churn
 from sica.fingerprint import binding_of, ip_prefix24, ip_scope16, parse_user_agent
-from sica.inject import InjectionConfig, inject_session
+from sica.benchmark import InjectionConfig, inject_session
 from sica.invariants import InvariantParams, v3_binding_fork, v5_rate_discontinuity
-from sica.metrics import pr_auc, roc_auc
-from sica.monitor import ContinuityMonitor, MonitorConfig
+from sica.evaluation import pr_auc, roc_auc
+from sica.detector import ContinuityMonitor, MonitorConfig
 
 CHROME = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
           "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
@@ -145,7 +145,7 @@ def test_applicability_detects_an_unexercisable_invariant():
 
 # --- injection and protocol ------------------------------------------------
 
-DATA = Path(__file__).resolve().parents[1] / "data" / "raw" / "apache_sample_1.log"
+DATA = Path(__file__).resolve().parents[1] / "data" / "W1" / "apache_sample_1.log"
 
 
 @pytest.fixture(scope="module")
@@ -221,7 +221,7 @@ def test_calibration_ignores_labels_entirely(sessions):
     the earlier version of this project had to retract.
     """
     import copy
-    from sica.calibrate import calibrate
+    from sica.detector import calibrate
     res = sica.run_experiment(sessions, sica.ExperimentConfig(seed=2))
     cal = res["calibration_sessions"]
     cfg_a, info_a = calibrate(cal, alpha=0.01)

@@ -2,14 +2,11 @@
 # Normalise text in the repository, check out native on each platform.
 * text=auto eol=lf
 
-# Keep shell scripts LF on every platform, or they will not execute.
-*.sh text eol=lf
-
 # Frozen scientific inputs --------------------------------------------------
 # The two benchmark corpora are byte-frozen and hash-verified against upstream
-# (see docs/DATASET_FREEZE.md). They must NEVER be line-ending normalised or
+# (SHA-256 in README). They must NEVER be line-ending normalised or
 # altered in transit, or their SHA-256 will change and reproducibility breaks.
-data/raw/*.log -text -diff
+data/*/*.log -text -diff
 
 # Generated scientific artefacts -------------------------------------------
 # Tracked deliberately as the evidence for the reported results, but there is
@@ -17,8 +14,7 @@ data/raw/*.log -text -diff
 results/tables/*.csv   -diff
 results/figures/*.pdf  binary
 results/figures/*.png  binary
-results/metadata/*.json -diff
-results_archive/**     -diff
+results/summary/*.json -diff
 
 # Documents ----------------------------------------------------------------
 *.pdf binary
@@ -29,5 +25,4 @@ results_archive/**     -diff
 paper/IEEEtran.cls linguist-vendored
 paper/tables/*.tex linguist-generated
 results/**         linguist-generated
-results_archive/** linguist-generated
-data/raw/*.log     linguist-vendored
+data/*/*.log       linguist-vendored

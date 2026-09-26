@@ -1,9 +1,7 @@
-"""Regression tests for the defects found in the architecture audit.
+"""Regression tests for defects found and fixed during development.
 
-Each test here corresponds to a numbered finding in ``docs/ARCHITECTURE_AUDIT.md`` and was
-written *before* the corresponding correction, and confirmed to fail against the old
-behaviour.  They exist to stop a repaired defect from returning silently; the property each
-one asserts is stated in ``docs/TEST_PLAN.md``.
+Each test was written before its fix and confirmed to fail on the old behaviour,
+so that a repaired defect cannot return silently.
 """
 from __future__ import annotations
 
@@ -14,9 +12,9 @@ import numpy as np
 import pytest
 
 import sica
-from sica.calibrate import calibrate, threshold_for_budget
+from sica.detector import calibrate, threshold_for_budget
 
-DATA = Path(__file__).resolve().parents[1] / "data" / "raw" / "apache_sample_1.log"
+DATA = Path(__file__).resolve().parents[1] / "data" / "W1" / "apache_sample_1.log"
 
 # A coarse, heavily tied population of session peak risks.  This is the shape the real
 # statistic has: a large mass at zero (sessions with no binding change at all) and a few
@@ -95,7 +93,7 @@ def test_reported_envelope_contains_colocated_attackers():
     comparison carries no information, and the benchmark measures address-change detection
     rather than session-hijack detection.
     """
-    from sica.inject import LEVELS_COLOCATED
+    from sica.benchmark import LEVELS_COLOCATED
     reported = set(sica.ExperimentConfig().levels)
     assert set(LEVELS_COLOCATED) <= reported, (
         f"reported envelope {sorted(reported)} excludes the co-located levels "
@@ -105,7 +103,7 @@ def test_reported_envelope_contains_colocated_attackers():
 def test_every_masquerade_level_has_its_declared_address_relation(sessions):
     """Each level must bear its documented relation to the victim's address and agent."""
     from sica.fingerprint import ip_prefix24, ip_scope16
-    from sica.inject import LEVELS_ALL, InjectionConfig, inject_session
+    from sica.benchmark import LEVELS_ALL, InjectionConfig, inject_session
 
     rng = np.random.default_rng(0)
     donors = [s for s in sessions if s.n >= 3]
@@ -160,7 +158,7 @@ def test_masquerade_level_uses_the_post_churn_victim_binding(sessions):
     the level declares.
     """
     from sica.fingerprint import ip_prefix24, ip_scope16
-    from sica.inject import InjectionConfig, inject_session
+    from sica.benchmark import InjectionConfig, inject_session
 
     rng = np.random.default_rng(3)
     donors = [s for s in sessions if s.n >= 3]
@@ -218,7 +216,7 @@ def test_version_bump_is_observable_for_every_parsed_family():
     not a mainstream browser, so on a workload dominated by one such family the benign
     agent-update class existed in name only.
     """
-    from sica.churn import bump_agent_version
+    from sica.benchmark import bump_agent_version
     from sica.fingerprint import binding_of
 
     for family, ua in REAL_AGENTS.items():
@@ -236,9 +234,9 @@ def test_version_bump_is_observable_for_every_parsed_family():
 
 def test_agent_churn_is_observable_on_the_apt_workload():
     """On package-manager traffic, M2-churned sessions must actually exercise V1."""
-    from sica.churn import ChurnConfig, apply_churn
-    from sica.monitor import ContinuityMonitor, MonitorConfig
-    from pipeline.common import load
+    from sica.benchmark import ChurnConfig, apply_churn
+    from sica.detector import ContinuityMonitor, MonitorConfig
+    from sica.experiments import load
 
     w2 = load("W2_apt")[:400]
     churned, stats = apply_churn(
@@ -269,7 +267,7 @@ def test_binary_rule_auc_is_exactly_balanced_accuracy():
     in the same column as a ranking AUC over a continuous risk implies a score resolution the
     rule does not have.
     """
-    from sica.metrics import confusion, rate_metrics, roc_auc
+    from sica.evaluation import confusion, rate_metrics, roc_auc
 
     rng = np.random.default_rng(0)
     for _ in range(20):
@@ -283,7 +281,7 @@ def test_binary_rule_auc_is_exactly_balanced_accuracy():
 
 def test_pinning_baselines_report_no_ranking_metrics(sessions):
     """Binary baselines must carry their operating-point metrics and no ranking metric."""
-    from sica.harness import run_baselines
+    from sica.evaluation import run_baselines
 
     cfg = sica.ExperimentConfig(seed=4)
     res = sica.run_experiment(sessions, cfg)
@@ -336,7 +334,7 @@ def test_takeover_respects_its_theft_window(earliest, latest, label):
     of the session regardless of what the sweep asked for.  E4's theft-position sweep was
     inert for exactly the sessions it was meant to probe.
     """
-    from sica.inject import InjectionConfig, inject_session
+    from sica.benchmark import InjectionConfig, inject_session
 
     n = 100
     rng = np.random.default_rng(0)
@@ -363,7 +361,7 @@ def test_takeover_respects_its_theft_window(earliest, latest, label):
 
 def test_takeover_reports_rejections_rather_than_relocating_the_theft():
     """When no donor can supply the tail, the session is refused and the refusal counted."""
-    from sica.inject import InjectionConfig, inject_session
+    from sica.benchmark import InjectionConfig, inject_session
 
     rng = np.random.default_rng(0)
     short_donor = _synthetic_session("donor", "198.51.100.9", OTHER_UA, 8, t0=5000.0)
@@ -385,14 +383,14 @@ def test_concurrent_interleaves_at_every_swept_theft_delay(sessions, delay):
     """The defining property of the concurrent mode must survive its own sweep.
 
     Sessions in these corpora span at most 59 seconds, because the source logs carry a
-    degenerate minute field (see docs/DATASET_VERIFICATION.md).  E4 nevertheless sweeps
+    degenerate minute field (see README, Dataset).  E4 nevertheless sweeps
     ``theft_delay_s`` over 0/1/60/600 s.  At 60 s and above the attacker's first request was
     placed after the victim's session had already ended, so the victim's surviving requests
     all preceded the attacker's and the session became a takeover wearing a concurrent
     label -- measured at only 34% still interleaving.  The sweep was then varying the
     scenario type rather than the delay it claimed to vary.
     """
-    from sica.inject import InjectionConfig, inject_session
+    from sica.benchmark import InjectionConfig, inject_session
 
     rng = np.random.default_rng(1)
     donors = [s for s in sessions if s.n >= 3]
@@ -457,7 +455,7 @@ def test_session_ids_are_unique_on_both_corpora():
 
     A collision would merge two sessions' state inside the monitor and corrupt both.
     """
-    from pipeline.common import WORKLOADS, load
+    from sica.experiments import WORKLOADS, load
 
     for workload in WORKLOADS:
         sessions = load(workload)
@@ -476,7 +474,7 @@ def test_pr_auc_is_invariant_to_input_order_under_ties():
     average precision that walks the sorted list without grouping ties is optimistic when
     positives happen to precede negatives inside a tie group and pessimistic otherwise.
     """
-    from sica.metrics import pr_auc
+    from sica.evaluation import pr_auc
 
     rng = np.random.default_rng(0)
     y = np.array([1, 0, 1, 0, 0, 1, 0, 0, 0, 0])
@@ -490,7 +488,7 @@ def test_pr_auc_is_invariant_to_input_order_under_ties():
 
 def test_pr_auc_matches_known_values():
     """Closed-form cases: all scores tied gives the prevalence; separable gives 1.0."""
-    from sica.metrics import pr_auc
+    from sica.evaluation import pr_auc
 
     assert pr_auc([1, 0, 1, 0], [0.5, 0.5, 0.5, 0.5]) == pytest.approx(0.5)
     assert pr_auc([1, 0, 0, 0], [0.5, 0.5, 0.5, 0.5]) == pytest.approx(0.25)
@@ -502,7 +500,7 @@ def test_pr_auc_matches_known_values():
 
 def test_roc_auc_matches_known_values():
     """Tie handling in ROC AUC re-verified alongside, as a regression guard."""
-    from sica.metrics import roc_auc
+    from sica.evaluation import roc_auc
 
     assert roc_auc([0, 0, 1, 1], [0.0, 0.1, 0.9, 1.0]) == pytest.approx(1.0)
     assert roc_auc([1, 0, 1, 0], [0.5, 0.5, 0.5, 0.5]) == pytest.approx(0.5)
@@ -512,7 +510,7 @@ def test_roc_auc_matches_known_values():
 
 def test_pin_ip_is_not_perfect_by_construction(sessions):
     """Address pinning must not attain recall 1.0 on the reported envelope by definition."""
-    from sica.baselines import pinning_predictions
+    from sica.evaluation import pinning_predictions
 
     res = sica.run_experiment(sessions, sica.ExperimentConfig(seed=5))
     ev = res["sessions"]

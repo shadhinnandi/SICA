@@ -23,28 +23,3 @@ Thumbs.db
 *.swp
 *.swo
 *~
-
-# =============================================================================
-# INTENTIONALLY TRACKED — do not add these to this file.
-#
-# The following are reproducibility-critical and MUST be committed, even though
-# many projects exclude them by reflex:
-#
-#   data/raw/*.log        (9.0 MB)  the two frozen corpora. The study cannot be
-#                                   reproduced without them, and they are
-#                                   Apache-2.0 licensed and redistributable.
-#   results/              (2.7 MB)  the current final results, figures, metadata
-#                                   and per-stage logs. These are the evidence
-#                                   for every number in the manuscript.
-#   paper/tables/*.tex              generated, but the manuscript will not
-#                                   compile without them.
-#   results_archive/      (1.6 MB)  the superseded run, retained as the evidence
-#                                   base for the audit findings. See its
-#                                   PROVENANCE.md.
-#
-# Total repository size is roughly 15 MB, which is well within normal limits for
-# GitHub and is the price of a reproducible record.
-#
-# Note that `paper/*.pdf` above excludes the COMPILED MANUSCRIPT only. The
-# figure PDFs live in results/figures/ and are tracked.
-# =============================================================================

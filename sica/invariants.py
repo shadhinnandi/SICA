@@ -28,72 +28,21 @@ INVARIANTS: tuple[str, ...] = (
 )
 N_INVARIANTS = len(INVARIANTS)
 
-#: The invariants retained in the final detector.
+#: The invariants used by the final detector.
 #:
-#: The set was selected on the **development seed block (100--119)**, disjoint
-#: from the seeds used for any reported result, by
-#: ``pipeline/dev_invariants.py``.  The selection criterion is **threshold-free
-#: ranking quality (ROC AUC) on development seeds, required to be consistent
-#: across both workloads** --- ranking quality rather than F1 or the realised
-#: false-alarm rate, because the operating point is a separate, operator-chosen
-#: parameter, and comparing candidate sets at a nominal budget that each misses
-#: by a different margin would confound the choice of invariants with the choice
-#: of threshold.
+#: Chosen on the development seeds (100-119, disjoint from the reporting seeds)
+#: by threshold-free ROC AUC, required to agree across both workloads.  V4, V5
+#: and V6 stay implemented only so that the E3 ablation can restore them:
 #:
-#: **What the criterion actually resolved to, stated exactly.**  On W1 this set is
-#: the outright maximum (ROC AUC 0.9613 against 0.9521 for ``V1,V2`` and 0.9421
-#: for ``V1,V2,V3,V6``).  On W2 it is **not** the outright maximum:
-#: ``V1,V2,V3,V4,V6`` scores 0.9608 against this set's 0.9589, a difference of
-#: 0.0019 with comfortably overlapping confidence intervals ([0.9586, 0.9628]
-#: against [0.9569, 0.9609]) --- a statistical tie.  That same candidate is
-#: clearly *worse* on W1 (0.9409, non-overlapping).  The rule applied was therefore
-#: "best on one workload and statistically tied on the other, with no candidate
-#: dominating on both", which is the cross-workload consistency requirement stated
-#: above; it was not a per-workload argmax, and describing it as one would
-#: overstate how cleanly the data separated the candidates.
+#: * V4 (transition velocity) fires on the same event V2 already reports, and its
+#:   300 s settle time exceeds every session in these logs (all are under 60 s).
+#: * V5 (rate discontinuity) reads inter-arrival times, which are generator
+#:   artefacts in these logs (the minute field is degenerate).
+#: * V6 (navigation break) lowered ROC AUC on W1 and cannot fire on W2, which
+#:   carries almost no referrers.
 #:
-#: **What the criterion costs.**  Dropping ``v_3`` (i.e. ``V1,V2``) yields a higher
-#: F1 on both workloads on development seeds (0.705 against 0.649 on W1; 0.694
-#: against 0.539 on W2) while yielding a lower ROC AUC.  ``v_3`` is retained
-#: because the criterion was declared before the comparison and is threshold-free,
-#: not because it wins on every metric.  The ablation reports this cost rather
-#: than hiding it.
-#:
-#: Three invariants were implemented, evaluated and *not* retained, for specific
-#: rather than incidental reasons.
-#:
-#: ``v_4`` (transition velocity) fires on the same event that ``v_2`` already
-#: reports --- a network-scope change between two closely spaced requests --- so
-#: in a log without geographic coordinates it double-counts one piece of
-#: evidence.
-#:
-#: ``v_5`` (rate discontinuity) fires on 12--19% of benign requests.  An earlier
-#: revision attributed that to ordinary page loads being bursty.  **That reason
-#: was wrong.**  Independent verification of the corpora
-#: (``docs/DATASET_VERIFICATION.md`` section 6) established that the source logs
-#: carry a degenerate minute field --- always ``05`` in W1, ``05`` or ``06`` in
-#: W2 --- so every sessionised session spans at most 59 seconds and every
-#: inter-arrival gap is an artefact of the upstream generator rather than an
-#: observation of client behaviour.  ``v_5`` is therefore measuring noise here,
-#: and this corpus cannot credit it with signal it might carry against a scripted
-#: adversary on real timing data.  It must not be used as a primary invariant on
-#: this benchmark.
-#:
-#: The same finding is why ``v_4`` cannot be assessed here at all: its
-#: ``t_settle`` is 300 s while no session exceeds 59 s, so every scope transition
-#: is instantaneous by construction.
-#:
-#: ``v_6`` (navigation break) reduced ranking quality on the one workload where
-#: it is applicable at all, and is inapplicable on the other --- where the
-#: applicability gate correctly disables it.  Dropping it also removes the only
-#: corpus-level parameter (the first-party host set) from the deployed
-#: configuration.
-#:
-#: All three remain implemented, and the ablation restores each of them, so the
-#: rejections stay auditable rather than asserted.  A deployment supplying
-#: genuine geolocation (``v_4``), facing a scripted adversary (``v_5``), or
-#: serving a referrer-rich first-party application (``v_6``) may recover their
-#: value.
+#: Dropping V3 raises F1 at the 1% operating point but lowers ROC AUC; V3 is kept
+#: because the selection criterion was fixed in advance (see the E3 ablation).
 DEFAULT_INVARIANTS: tuple[str, ...] = (
     "V1_agent_mutation",
     "V2_scope_discontinuity",

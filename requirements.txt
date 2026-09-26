@@ -1,11 +1,5 @@
-# The detector (sica/) needs only numpy and pandas.
-numpy>=1.24
-pandas>=2.0
-# Experiment pipeline only.
-scipy>=1.10        # Wilcoxon signed-rank test (pipeline/exp07_stats.py)
-matplotlib>=3.7    # figures (pipeline/exp08_figures.py)
-# NOT required to run anything.  config.yaml is a descriptive mirror of the
-# frozen configuration and is not loaded by any code; no module imports yaml.
-# Listed only for anyone who wants to parse config.yaml themselves.
-# pyyaml>=6.0      # optional
-pytest>=7.0        # tests/
+numpy>=1.24        # detector and evaluation
+pandas>=2.0        # log parsing and result tables
+scipy>=1.10        # E7 statistical tests
+matplotlib>=3.7    # figures
+pytest>=7.0        # tests
