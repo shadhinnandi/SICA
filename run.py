@@ -1,12 +1,12 @@
 """Run SICA end to end.
 
     python run.py            main workflow: data -> sessions -> SICA -> evaluation -> results
-    python run.py --all      the full study E0-E7 behind every paper table (about 1 hour)
-    python run.py --report   rebuild paper tables, figures and summary from results/tables
+    python run.py --all      the full study E0-E7 behind every reported result (about 1 hour)
+    python run.py --report   rebuild figures and summary from results/tables
     python run.py --test     unit and regression tests
     python run.py --dev      development studies on seeds 100-119 (not part of the results)
 
-Everything is written to results/ (tables/, figures/, summary/) and paper/tables/.
+Everything is written to results/ (tables/, figures/, summary/).
 """
 from __future__ import annotations
 
@@ -34,8 +34,7 @@ def run_tests() -> int:
 
 
 def build_report() -> int:
-    step("Report: paper tables, figures, summary, validation")
-    R.make_tables()
+    step("Report: figures, summary, validation")
     R.make_figures()
     status = R.validate()
     R.write_summary(validation_ok=(status == 0))

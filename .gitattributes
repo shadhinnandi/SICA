@@ -23,6 +23,5 @@ results/summary/*.json -diff
 # Stop GitHub reporting this as a "TeX" or "data" project: the contribution is
 # the Python detector and its evaluation pipeline.
 paper/IEEEtran.cls linguist-vendored
-paper/tables/*.tex linguist-generated
 results/**         linguist-generated
 data/*/*.log       linguist-vendored

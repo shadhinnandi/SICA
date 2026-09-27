@@ -6,11 +6,11 @@ Detector (what would run next to a web server):
     invariants.py    V1 agent mutation, V2 scope discontinuity, V3 binding fork
     detector.py      per-session state, risk = sum w_i v_i, threshold, ALLOW / ALERT
 
-Evaluation (how the paper's numbers are produced):
+Evaluation (how the reported results are produced):
     benchmark.py     benign mobility and simulated hijacks (levels L0-L5)
     evaluation.py    calibrate-then-evaluate protocol, metrics, baselines
     experiments.py   experiments E0-E7
-    report.py        paper tables, figures, summary, validation
+    report.py        figures, summary, validation
 """
 from .fingerprint import Binding, binding_of, ip_prefix24, ip_scope16, parse_user_agent
 from .invariants import DEFAULT_INVARIANTS, INVARIANTS, InvariantParams

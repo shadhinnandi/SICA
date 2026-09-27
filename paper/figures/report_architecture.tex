@@ -1,0 +1,73 @@
+% Figure for report.tex: complete SICA workflow in one column, with its own
+% styles so the file is self-contained.
+\begin{tikzpicture}[
+  x=1mm, y=1mm, font=\footnotesize,
+  rbox/.style={draw=black!70, line width=0.5pt, rounded corners=1.5pt, align=center,
+               fill=white, inner sep=1.6pt, minimum height=8.5mm},
+  rcell/.style={draw=black!60, line width=0.4pt, fill=white, minimum width=10.8mm,
+                minimum height=5.2mm, inner sep=0pt, font=\scriptsize},
+  rchk/.style={rbox, fill=rblue!10, text width=24.5mm, minimum height=18.5mm},
+  rout/.style={rbox, font=\footnotesize\bfseries, minimum width=17mm, minimum height=6.5mm},
+  rarr/.style={-{Stealth[length=1.6mm,width=1.2mm]}, line width=0.55pt, draw=black!75},
+  rcal/.style={-{Stealth[length=1.5mm,width=1.1mm]}, line width=0.5pt, draw=rblue, densely dashed},
+  rsub/.style={font=\scriptsize, text=black!70},
+]
+  % 1. input
+  \node[rbox, fill=black!8, text width=62mm] (log) at (0,3)
+    {\textbf{Web server access logs}\\[-0.3ex]
+     {\scriptsize IP, time, request, status, size, referrer, User-Agent}};
+  % 2. sessions
+  \node[rbox, text width=62mm] (sess) at (0,-9.5)
+    {\textbf{Session reconstruction}\\[-0.3ex]
+     {\scriptsize group by (IP, User-Agent), split after 30 min idle}};
+  % 3. binding
+  \node[font=\footnotesize\bfseries] (btitle) at (0,-23.2) {Client binding extraction (per request)};
+  \foreach \lab [count=\i] in {IP,/24,/16,Browser,Version,OS,Device} {
+    \pgfmathsetmacro{\xx}{(\i-4)*11.6}
+    \ifnum\i<4 \node[rcell, fill=rblue!14] (c\i) at (\xx,-29.5) {\lab};
+    \else \node[rcell, fill=rred!14] (c\i) at (\xx,-29.5) {\lab};\fi
+  }
+  \node[rsub] at ($(c1.south)!0.5!(c3.south)+(0,-2.4)$) {network part};
+  \node[rsub] at ($(c4.south)!0.5!(c7.south)+(0,-2.4)$) {agent part};
+  \begin{scope}[on background layer]
+    \node[draw=black!70, line width=0.5pt, rounded corners=1.5pt, fill=white,
+          fit=(btitle)(c1)(c7), inner xsep=1.4mm, inner ysep=4.2mm, yshift=-1.3mm] (bind) {};
+  \end{scope}
+  % 4. checks
+  \node[rsub, align=center] (chktitle) at (0,-43.5)
+    {checks against the session's reference binding and its last four bindings};
+  \node[rchk] (v1) at (-28.5,-54)
+    {\textbf{V1 Agent}\\\textbf{mutation}\\[0.3ex]
+     {\scriptsize browser, OS, device: 1.00\\ version only: 0.35}};
+  \node[rchk] (v2) at (0,-54)
+    {\textbf{V2 Network}\\\textbf{discontinuity}\\[0.3ex]
+     {\scriptsize new /16: 1.00\\ new /24: 0.45,\; new host: 0.15}};
+  \node[rchk] (v3) at (28.5,-54)
+    {\textbf{V3 Binding}\\\textbf{fork}\\[0.3ex]
+     {\scriptsize earlier binding returns\\ after another one: 1.00}};
+  % 5. risk and threshold
+  \node[rbox, fill=rblue!10, text width=81mm] (risk) at (0,-71.5)
+    {\textbf{Weighted risk score}\quad \mbox{$R=w_1V_1+w_2V_2+w_3V_3$}\\[-0.2ex]
+     {\scriptsize session peak $R_{\max}$ = highest request risk seen so far in the session}};
+  \node[rbox, text width=44mm, line width=0.75pt] (thr) at (-19,-86.5)
+    {\textbf{Calibrated threshold}\\[-0.2ex] is \mbox{$R_{\max}\ge\tau$\,?}};
+  \node[rbox, fill=black!8, text width=24mm, font=\scriptsize] (cal) at (29.5,-86.5)
+    {\textbf{Calibration} (attack-free)\\ $w_i$ from benign rarity\\ $\tau$ for a 1\% alert budget};
+  % 6. outputs
+  \node[rout, fill=black!8] (allow) at (-32,-101) {ALLOW};
+  \node[rout, fill=rred!22] (alert) at (-6,-101) {ALERT};
+  \node[rbox, font=\scriptsize, text width=27mm, minimum height=6.5mm] (why) at (26,-101)
+    {reason: V1 / V2 / V3\\ e.g.\ V2=1.00 | V3=1.00};
+  % arrows
+  \draw[rarr] (log) -- (sess);
+  \draw[rarr] (sess) -- (bind.north |- sess.south) -- (bind.north);
+  \draw[rarr] (bind.south) -- (chktitle.north);
+  \foreach \v in {v1,v2,v3} \draw[rarr] (chktitle.south -| \v.north) -- (\v.north);
+  \foreach \v in {v1,v2,v3} \draw[rarr] (\v.south) -- (\v.south |- risk.north) ;
+  \draw[rarr] (risk.south -| thr.north) -- (thr.north);
+  \draw[rarr] (thr.south -| allow.north) -- node[rsub, left] {no} (allow.north);
+  \draw[rarr] (thr.south -| alert.north) -- node[rsub, right] {yes} (alert.north);
+  \draw[rarr] (alert) -- (why);
+  \draw[rcal] (cal.north) -- node[rsub, right, text=rblue] {$w_i$} (cal.north |- risk.south);
+  \draw[rcal] (cal.west) -- node[rsub, above, text=rblue] {$\tau$} (thr.east);
+\end{tikzpicture}

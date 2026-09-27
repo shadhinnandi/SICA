@@ -4,7 +4,7 @@ __pycache__/
 .venv/
 .pytest_cache/
 
-# LaTeX build artefacts (paper.tex and ref.bib are tracked; outputs are not)
+# LaTeX build artefacts of the course report (report.tex and report.bib are tracked)
 paper/*.aux
 paper/*.bbl
 paper/*.blg
