@@ -1,5 +1,1 @@
-numpy>=1.24        # detector and evaluation
-pandas>=2.0        # log parsing and result tables
-scipy>=1.10        # E7 statistical tests
-matplotlib>=3.7    # figures
-pytest>=7.0        # tests
+# No external packages are needed. SICA uses only the Python standard library.

@@ -1,144 +1,262 @@
 # SICA: Session Integrity and Continuity Analysis
 
-SICA is a lightweight, rule-based detector for **mid-session HTTP session
-hijacking**. It works from the access logs a web server already writes. For
-every request it builds a *client binding* (IP address, /24 and /16 network,
-browser, version, operating system and device), checks how that binding changes
-during the session, and turns the changes into a risk score. A threshold
-calibrated on attack-free traffic then decides **ALLOW** or **ALERT**, and every
-alert explains which checks caused it.
+SICA is a small rule/risk-based detector for possible **mid-session HTTP session
+hijacking**. It only uses information a web server already writes to its access
+log: the client IP address and the User-Agent string of each request.
 
-The key idea is the **binding fork**. A legitimate user who changes network moves
-one way (`A A A B B B`). When an attacker uses a stolen session while the victim
-is still active, the two clients alternate and an earlier binding comes back
-(`A A B A B`). SICA detects that return.
+SICA uses **no AI, no machine learning, no neural network and no external
+detection model**. It is a fixed formula with three weights and one threshold,
+so the same input always gives the same result.
 
----
+## Problem
 
-## Highlights
+After login, a web application recognises the user only by a session ID (usually
+a cookie). If an attacker steals that ID, they can reuse the valid session from
+their own machine without ever logging in.
 
-- **Server-log only.** Needs just the IP address and User-Agent from standard
-  Apache/Nginx logs. No client changes, JavaScript or extra data collection.
-- **No machine learning.** Three fixed checks, three weights and one threshold.
-  The same input always gives the same output.
-- **Controlled false alarms.** The threshold is chosen from benign sessions for a
-  1% alert budget that the operator can change.
-- **Explainable.** Every alert names the checks that fired, for example
-  `V2_scope_discontinuity=1.00|V3_binding_fork=1.00`.
-- **Fast.** Constant work per request, about 55,000 requests per second in
-  Python and a few kilobytes of state per live session.
+A normal session keeps roughly the same client: the same network and the same
+browser. SICA watches every session for changes in these client characteristics
+(the *client binding*) and raises the risk when they change.
 
-## How It Works
+## Objective
 
+Build a simple, explainable detector that reads access-log requests session by
+session and decides **ALLOW** or **ALERT** for each session, using the network,
+the User-Agent and whether an earlier client comes back into the session.
+
+## How SICA Works
+
+```text
+Server Access Logs  (data/W1_sample.csv, data/W2_sample.csv)
+        |
+        v
+Group requests by session_id, keep their order
+        |
+        v
+For each request: compare the client with the session's reference client
+        |
+        +--> User-Agent change   (browser / OS / device / version)
+        +--> Network change      (same IP, /24, /16)
+        +--> Old client back?    (binding fork)
+        |
+        v
+Risk score for the request
+        |
+        v
+Highest risk in the session  >=  0.6282 ?
+        |
+   +----+----+
+   |         |
+ ALLOW     ALERT
 ```
-Access log -> Sessions -> Client binding -> V1 / V2 / V3 -> Risk score -> Threshold -> ALLOW / ALERT
+
+## Risk Formula
+
+```text
+risk = 0.3718 × user_agent_change
+     + 0.3301 × network_change
+     + 0.2981 × old_client_back
+
+threshold = 0.6282
 ```
 
-| Check | What it looks for | Value |
+| Constant in `run.py` | Value | Meaning |
 |---|---|---|
-| V1 Agent mutation | browser, OS or device changed / only the version changed | 1.00 / 0.35 |
-| V2 Network discontinuity | new /16 / new /24 / new host in the same /24 | 1.00 / 0.45 / 0.15 |
-| V3 Binding fork | an earlier binding returns after a different one | 1.00 |
+| `W_AGENT` | 0.3718 | User-Agent weight |
+| `W_NETWORK` | 0.3301 | Network weight |
+| `W_FORK` | 0.2981 | Binding fork (old client back) weight |
+| `THRESHOLD` | 0.6282 | Alert threshold |
 
-Risk per request is `R = w1*V1 + w2*V2 + w3*V3`. The weights come from how rare
-each check is on benign traffic, and a session alerts when its peak risk reaches
-the calibrated threshold.
+**User-Agent change**
+
+| Situation | Score |
+|---|---|
+| browser, OS or device type changed | 1.00 |
+| only the browser version changed | 0.35 |
+| unchanged | 0.00 |
+
+**Network change**
+
+| Situation | Score |
+|---|---|
+| different /16 network (first two parts of the IP differ) | 1.00 |
+| different /24 subnet inside the same /16 | 0.45 |
+| new IP inside the same /24 | 0.15 |
+| same IP | 0.00 |
+
+**Old client back (binding fork)**
+
+| Situation | Score |
+|---|---|
+| a client seen earlier in the session returns after a different client appeared | 1.00 |
+| otherwise | 0.00 |
+
+## Decision Rule
+
+```text
+highest request risk in the session >= 0.6282  ->  ALERT
+highest request risk in the session <  0.6282  ->  ALLOW
+```
+
+A network change alone (0.3301) or a User-Agent change alone (0.3718) stays
+below the threshold, because honest users do change networks or update
+browsers. Both together (0.7019), or an old client returning from another
+network (0.3301 + 0.2981 = 0.6282), reach it.
+
+## Dataset
+
+The original logs are public samples from the Elastic Examples repository
+(Apache 2.0, see `data/LICENSE-APACHE-2.0.txt`):
+
+| | Original log | Sample used by SICA |
+|---|---|---|
+| W1 | `data/W1/apache_sample_1.log` (Apache, 10,000 requests) | `data/W1_sample.csv`: 100 sessions, 1,485 requests |
+| W2 | `data/W2/nginx_real.log` (Nginx, 51,462 requests) | `data/W2_sample.csv`: 100 sessions, 1,395 requests |
+
+The logs contain no session cookies, so `make_samples.py` rebuilds sessions with
+these project-specific rules:
+
+- client identity = IP address + User-Agent
+- a pause longer than 30 minutes starts a new session
+- a session needs at least 7 requests
+- the first 100 sessions (by start time) are kept
+
+Sample columns: `session_id, time, ip, user_agent, path, attack`.
+
+### Simulated Attack Cases
+
+The original logs do not contain any confirmed real attacks. The project
+therefore adds **simulated** hijacks: every 5th session (20 per dataset) gets
+attacker requests, marked with `attack=1`. The attacker uses the IP address of another
+session (the next one from a different /16 network). Four simulated types rotate:
+
+| Type | What the attacker does |
+|---|---|
+| concurrent | own User-Agent, 2 requests in the middle, victim keeps browsing |
+| concurrent, copied UA | same, but copies the victim's User-Agent |
+| takeover | own User-Agent, replaces the second half, victim stops |
+| takeover, copied UA | same, but copies the victim's User-Agent |
 
 ## Results
 
-Two public access-log datasets with injected hijacks and simulated legitimate
-mobility, 1% alert budget, mean of 30 seeds:
+`python run.py --data`:
 
-| Dataset | ROC AUC | Recall | FPR | Precision | PR AUC |
-|---|---|---|---|---|---|
-| W1 (Apache, human web browsing) | 0.884 | 0.358 | 0.85% | 0.906 | 0.742 |
-| W2 (Nginx, package clients) | 0.851 | 0.229 | 0.56% | 0.920 | 0.667 |
+| Dataset | Sessions | Simulated hijacks | Detected | False alarms |
+|---|---:|---:|---:|---:|
+| W1 | 100 | 20 | 15 | 0 / 80 |
+| W2 | 100 | 20 | 13 | 0 / 80 |
 
-SICA keeps false alarms below 1% with more than 9 of 10 alerts being real
-hijacks, while IP pinning alarms on about 15% of benign sessions. It is strongest
-against concurrent use of a session from a different network or client. Its
-scope is what an access log can show: attackers who copy the victim's exact
-binding, and most silent takeovers, stay outside what these fields reveal.
+All concurrent hijacks are detected on both datasets. The takeovers with a
+copied User-Agent are missed (risk 0.3301, the same as a normal network change).
+On W2 two further takeovers are missed because the attacker's APT client differs
+from the victim's only in version (risk 0.4602).
 
-## Getting Started
+## Testing
 
-**Requirements:** Python 3.10 or newer.
+`data/test_cases.csv` has 8 hand-made test cases. Each has an `expected` result.
 
-```bash
-pip install -r requirements.txt
-```
+| # | Test case | Expected | Risk |
+|---|---|---|---|
+| 1 | Normal session (same IP and browser) | ALLOW | 0.0000 |
+| 2 | New IP in the same subnet (DHCP renewal) | ALLOW | 0.0495 |
+| 3 | Network change only (Wi-Fi to mobile data) | ALLOW | 0.3301 |
+| 4 | Browser version update only | ALLOW | 0.1301 |
+| 5 | User-Agent change only (same IP) | ALLOW | 0.3718 |
+| 6 | Network and User-Agent change together | ALERT | 0.7019 |
+| 7 | Hijack with copied User-Agent, victim keeps browsing | ALERT | 0.6282 |
+| 8 | Hijack from the same IP (shared NAT) with another browser, victim continues | ALERT | 0.6699 |
 
-## Running the Project
+Current result: **Passed: 8/8**.
 
-| Command | What it does | Time |
-|---|---|---|
-| `python run.py` | Main workflow: data, sessions, SICA, evaluation (E0, E1, E2, E7), figures, summary and validation | about 6 min |
-| `python run.py --all` | Full study: every experiment E0 to E7, then figures, summary and validation | about 1 hour |
-| `python run.py --report` | Rebuild figures and summary from the stored result tables, then validate | seconds |
-| `python run.py --test` | Run the 50 unit and regression tests | under 1 min |
-| `python run.py --dev` | Development studies on seeds 100 to 119 (not part of the reported results) | 10 to 20 min |
+## Installation
 
-**Run the full project from scratch:**
+Only Python 3 is needed (tested with Python 3.10). SICA uses only the standard
+library (`csv`, `os`, `re`, `sys`), so there is nothing to install;
+`requirements.txt` just says so. On macOS use `python3` if `python` is not found.
 
-```bash
-pip install -r requirements.txt
-python run.py --test      # 1. check the code (50 tests)
-python run.py --all       # 2. run every experiment and rebuild all outputs
-cat results/summary/summary.md   # 3. read the final results
-```
+## Commands
 
-Every result is deterministic given the seeds. Only the E6 timing numbers change
-with the machine.
-
-**Build the course report** (pdfLaTeX and BibTeX):
-
-```bash
-cd paper
-pdflatex report && bibtex report && pdflatex report && pdflatex report
-```
-
-## Outputs
-
-| Output | Location |
+| Command | What it does |
 |---|---|
-| Result tables (CSV, `e0_` to `e7_`) | `results/tables/` |
-| Figures (PDF and PNG) | `results/figures/` |
-| One-page results summary | `results/summary/summary.md` |
-| Per-session decisions for seed 0 | `results/summary/decisions_seed0.csv` |
-| Course report | `paper/report.pdf` |
+| `python run.py` | Opens the menu (datasets, test cases, manual test, risk formula, exit) |
+| `python run.py --test` | Runs the 8 test cases, prints Expected / Got / PASS, writes `results/test_results.csv` |
+| `python run.py --data` | Checks the W1 and W2 samples, writes `results/dataset_results.csv` |
+| `python run.py --manual` | Lets you type the requests of one session by hand |
+| `python make_samples.py` | Utility: rebuilds `data/W1_sample.csv` and `data/W2_sample.csv` from the original logs. Not needed for normal use. |
 
-The validation step checks the finished result set (56 checks, for example that
-every run meets its budget on calibration and that the detector imports no
-machine-learning library).
+## Manual Faculty Demonstration
+
+Run `python run.py --manual`. Enter a session ID, then for each request an IP and
+a User-Agent. `chrome`, `chrome121`, `firefox`, `safari`, `iphone` and `curl` are
+shortcuts for full User-Agent strings. Pressing Enter reuses the previous value.
+Type `done` to finish.
+
+**Normal case** (same IP, same User-Agent):
+
+```text
+Session ID: normal1
+Request 1   IP: 203.0.113.25   User-Agent: chrome
+Request 2   IP: <Enter>        User-Agent: <Enter>    -> Risk: 0.0000  ALLOW
+Request 3   IP: done
+Session normal1: 2 requests, highest risk 0.0000  ->  ALLOW
+```
+
+**Attack case** (victim, attacker, victim again):
+
+```text
+Session ID: attack1
+Request 1   IP: 203.0.113.25   User-Agent: chrome     (victim)
+Request 2   IP: 192.0.2.77     User-Agent: <Enter>    (attacker)
+            Network change: Yes (different network)   -> Risk: 0.3301  ALLOW
+Request 3   IP: 203.0.113.25   User-Agent: <Enter>    (victim returns)
+            Old client back: Yes (binding fork)       -> Risk: 0.6282  ALERT
+Request 4   IP: done
+Session attack1: 3 requests, highest risk 0.6282  ->  ALERT
+```
+
+Step-by-step guides are in [`docs/RUNNING_GUIDE.md`](docs/RUNNING_GUIDE.md).
 
 ## Project Structure
 
-```
+```text
 sica/
-├── run.py              single entry point
-├── requirements.txt    Python dependencies
-├── testing.md          full project guide in simple language
-├── docs/               dataset and file guide, hand-calculation example
-├── sica/               Python package (detector and evaluation)
-├── data/               W1 and W2 access logs (Apache 2.0)
-├── results/            tables, figures and summary
-├── tests/              unit and regression tests
-└── paper/              four-page course report (LaTeX and PDF)
+├── run.py                  detector + terminal interface (menu, --test, --data, --manual)
+├── make_samples.py         rebuilds the W1/W2 samples from the original logs
+├── requirements.txt        no third-party packages needed
+├── README.md
+├── concept.md              the idea behind SICA, explained simply
+├── LICENSE
+├── data/
+│   ├── W1/apache_sample_1.log    original W1 log
+│   ├── W2/nginx_real.log         original W2 log
+│   ├── W1_sample.csv             100 sessions used by run.py
+│   ├── W2_sample.csv             100 sessions used by run.py
+│   ├── test_cases.csv            8 test cases with expected results
+│   └── LICENSE-APACHE-2.0.txt
+├── results/
+│   ├── dataset_results.csv       one row per W1/W2 session
+│   └── test_results.csv          one row per test case
+├── docs/
+│   ├── HOW_IT_WORKS.md           step-by-step flow through the code
+│   ├── FUNCTIONS.md              every function and constant in run.py
+│   └── RUNNING_GUIDE.md          how to run, test and demonstrate
+└── paper/                        4-page course report (LaTeX and PDF)
 ```
 
-## Documentation
+## Limitations
 
-- [`testing.md`](testing.md): the whole project explained simply, including
-  workflow, architecture, calculations, results and how it is tested.
-- [`docs/DATASET_AND_FILES.md`](docs/DATASET_AND_FILES.md): the datasets, every
-  log column, and the purpose of every file in the project.
-- [`docs/WORKED_EXAMPLE.md`](docs/WORKED_EXAMPLE.md): a step-by-step hand
-  calculation of a legitimate user and a caught attacker.
-- [`paper/report.pdf`](paper/report.pdf): the four-page course report.
+- Log-based only: it sees IP and User-Agent, not packets, cookies or page content.
+- Fixed weights and a fixed threshold; they are not tuned per website or user.
+- The attacks in the datasets are simulated, not real incidents.
+- Legitimate users also change networks or browsers, so single changes are
+  deliberately allowed.
+- An attacker who copies the victim's User-Agent is harder to separate from a
+  normal network change.
+- A hijacker who takes over completely, so the original client never returns,
+  does not trigger the binding fork and may be missed.
+- An attacker with the victim's exact IP and User-Agent cannot be seen at all.
+- This is a course project, not a complete production security system.
 
-## Data and License
+## License
 
-The datasets are public sample logs from the
-[Elastic Examples](https://github.com/elastic/examples) repository, licensed
-under Apache 2.0 (`data/LICENSE-APACHE-2.0.txt`). The code and results are
-released under the MIT License (`LICENSE`).
+Code: MIT License (`LICENSE`). Data: Apache 2.0 (`data/LICENSE-APACHE-2.0.txt`).

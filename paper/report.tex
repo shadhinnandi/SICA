@@ -1,7 +1,8 @@
 % =====================================================================
 % SICA: short course project report (maximum four pages).
-% All numbers are taken unchanged from the stored results in
-% ../results/tables; nothing here was re-run or re-tuned.
+% All numbers come from the current implementation: python run.py --data
+% (results/dataset_results.csv) and python run.py --test
+% (results/test_results.csv).
 % Build: pdflatex report && bibtex report && pdflatex report && pdflatex report
 % =====================================================================
 \documentclass[conference]{IEEEtran}
@@ -42,20 +43,22 @@ After login, a web application recognises a user only by a session identifier,
 so an attacker who steals it can act inside the session without any failed
 login. Binding the session to the client's IP address is a common defence, but
 honest users also change networks, which causes false alarms. In this project we
-built SICA (Session Integrity and Continuity Analysis), a detector that uses
-only web server access logs. SICA describes each request by a client binding
-(IP address, /24 and /16 network, browser, operating system and device) and
-checks for agent changes, graded network changes and binding forks, where an
-earlier binding returns after a different one, as happens when a victim and an
-attacker share a session. The checks form a risk score that is compared with a
-threshold calibrated on attack-free sessions. On two public access-log datasets
-with injected hijacks, SICA reached ROC AUC 0.884 and 0.851 with false-positive
-rates below 1\% and precision above 0.9. Recall was low (0.358 and 0.229):
-attackers who copy the victim's binding, and most silent takeovers, are missed.
+built SICA (Session Integrity and Continuity Analysis), a simple rule/risk-based
+detector that uses only web server access-log information and no machine
+learning. SICA compares each request's client (IP address, /24 and /16 network,
+browser, version, operating system and device) with the client the session
+belongs to, and scores User-Agent changes, graded network changes and binding
+forks, where an earlier client returns after a different one, as happens when a
+victim and an attacker share a session. A fixed weighted sum gives a risk score,
+and a fixed threshold decides ALLOW or ALERT. On 100-session samples of two
+public access logs, each with 20 simulated hijacks, SICA detected 15 and 13
+hijacks with no false alarm on the 80 normal sessions, and it passed all 8
+deterministic test cases. Hijacks where the victim never returns and the
+attacker copies the User-Agent were missed.
 \end{abstract}
 
 \begin{IEEEkeywords}
-session hijacking, web access logs, client binding, anomaly detection
+session hijacking, web access logs, client binding, rule-based detection
 \end{IEEEkeywords}
 
 % =====================================================================
@@ -81,13 +84,12 @@ The usual server-side rule is to bind the session to the client's IP address and
 end it when the address changes. The main problem is that legitimate users also
 change addresses. Dynamic addresses are renumbered~\cite{padmanabhan2016dynamic},
 and a phone may move from Wi-Fi to a mobile network in the middle of a session.
-An IP pin treats each of these as an attack, and its false-alarm rate is simply
-the rate at which honest users move, which the operator cannot tune. Since real
-hijacks are rare compared with normal sessions, even a few percent of false
-alarms means that most alerts are false~\cite{axelsson2000baserate}. A richer
-client binding helps here. A new host in the same /24 network is weak evidence,
-while a jump to a different network, or a switch to a different browser or
-operating system, is much stronger.
+An IP pin treats each of these as an attack. Since real hijacks are rare
+compared with normal sessions, even a few percent of false alarms means that
+most alerts are false~\cite{axelsson2000baserate}. A richer client binding helps
+here. A new host in the same /24 network is weak evidence, while a jump to a
+different network, or a switch to a different browser or operating system, is
+much stronger.
 
 Previous work has approached session theft from several directions. Some
 defences make a stolen token useless, for example by replacing the static cookie
@@ -105,20 +107,20 @@ useful security signal, but they need client changes or JavaScript, work only at
 login time with per-user history, or depend on trained models of request
 content.
 
-Our project looks at a narrower, practical question: \emph{can a server detect
-observable mid-session hijacking using only the access logs it already writes,
-while keeping the false-alarm rate controlled and each alert easy to explain?}
-Our answer is SICA. It is based on one observation about the shape of binding
-changes. A user who moves from binding $A$ to binding $B$ leaves $A$ behind
-($A\,A\,A\,B\,B\,B$). When an attacker uses a stolen session while the victim is
-still browsing, the two clients alternate and the earlier binding comes back
-($A\,A\,B\,A\,B$). We call this return a \emph{binding fork}.
+Our project looks at a narrower, practical question: \emph{can a server flag
+observable mid-session hijacking using only the access-log information it
+already writes, with a rule that is easy to explain?} Our answer is SICA. It is
+based on one observation about the shape of client changes. A user who moves
+from client $A$ to client $B$ leaves $A$ behind ($A\,A\,A\,B\,B\,B$). When an
+attacker uses a stolen session while the victim is still browsing, the two
+clients alternate and the earlier client comes back ($A\,A\,B\,A\,B$). We call
+this return a \emph{binding fork}.
 
-In summary, we (i) built a client binding from access-log fields only, (ii)
-defined three simple checks, including the binding fork, (iii) derived the
-weights and a single alert threshold from attack-free sessions, without attack
-labels or machine learning, and (iv) evaluated SICA on two public access-log
-datasets and compared it with IP pinning.
+\textbf{Objective.} The objective of this course project is to detect possible
+mid-session HTTP session hijacking using server access-log information and a
+rule/risk-based client-binding approach: three simple checks, fixed weights and
+one fixed threshold, implemented in plain Python, and demonstrated on two public
+log samples with simulated hijacks and on deterministic test cases.
 
 % =====================================================================
 \section{Methodology}
@@ -126,14 +128,13 @@ datasets and compared it with IP pinning.
 
 \subsection{Problem Definition}
 
-A web server logs each request with the client IP address, time, requested path,
-status code, response size, referrer and User-Agent string. A session is the
-ordered list of requests that present the same session identifier. For every
-session, SICA must decide ALLOW or ALERT from the log alone, while keeping the
-share of benign sessions that alert close to a budget chosen in advance. We
-consider two kinds of hijack: a \emph{silent takeover}, where the victim stops
-sending requests after the theft, and a \emph{concurrent hijack}, where the
-victim and the attacker both keep using the session.
+A web server logs each request with the client IP address, time, requested path
+and User-Agent string. A session is the ordered list of requests that present
+the same session identifier. For every session, SICA must decide ALLOW or ALERT
+from this information alone. We consider two kinds of hijack: a \emph{silent
+takeover}, where the victim stops sending requests after the theft, and a
+\emph{concurrent hijack}, where the victim and the attacker both keep using the
+session.
 
 \subsection{Client Binding}
 
@@ -142,39 +143,39 @@ Each request is mapped to a client binding with seven fields:
 IP address \;|\; /24 \;|\; /16 \;|\; browser \;|\; version \;|\; OS \;|\; device
 \end{center}
 The first three fields form the \emph{network part}, and the last four, parsed
-from the User-Agent string, form the \emph{agent part}. Together they describe
-the client at different levels of detail. A new host in the same /24 is typical
-of an address renewal. A new /24 inside the same /16 often means another access
-network of the same provider. A new /16 usually means the client has left the
-network where the session started. On the agent side, a version change can
-follow a browser update, but a real client does not switch to a different
-browser, operating system or device class in the middle of a session.
+from the User-Agent string with fixed text rules, form the \emph{agent part}. A
+new host in the same /24 is typical of an address renewal. A new /24 inside the
+same /16 often means another access network of the same provider. A new /16
+usually means the client has left the network where the session started. On the
+agent side, a version change can follow a browser update, but a real client
+does not switch to a different browser, operating system or device class in the
+middle of a session.
 
-For each live session, SICA keeps a \emph{reference binding} and a list of the
-last four distinct bindings. When a client makes a one-way move to a new
-binding, the reference moves with it, so a user who settles on a new network is
-counted only once. When an earlier binding returns, the reference is left
-unchanged, because with two clients alternating there is no way to tell which
-one is the owner.
+For each session, SICA keeps a \emph{reference client}, the last client, and a
+list of the last four distinct clients. When a client makes a one-way move to a
+new client binding, the reference moves with it, so a user who settles on a new
+network is counted only once. When an earlier client returns, the reference is
+left unchanged, because with two clients alternating there is no way to tell
+which one is the owner.
 
 \subsection{The Three Checks}
 
-\textbf{V1: Agent mutation.} V1 compares the agent part of the request with the
-reference. It is 1.00 if the browser family, operating system or device class
-changed, and 0.35 if only the major browser version changed. A version change
-receives a smaller value because it can come from a normal update.
+\textbf{User-Agent change ($U$).} It compares the agent part of the request with
+the reference. It is 1.00 if the browser family, operating system or device
+class changed, 0.35 if only the major browser version changed, and 0 otherwise.
 
-\textbf{V2: Network-scope discontinuity.} V2 measures how far the client moved
-in the network hierarchy relative to the reference:
+\textbf{Network change ($N$).} It measures how far the client moved in the
+network hierarchy relative to the reference:
 \begin{center}
 \small
 \begin{tabular}{@{}lc@{}}
 \toprule
-Change relative to the reference & V2 \\
+Change relative to the reference & $N$ \\
 \midrule
 new /16 network & 1.00 \\
 new /24 inside the same /16 & 0.45 \\
 new host inside the same /24 & 0.15 \\
+same IP address & 0 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -182,95 +183,80 @@ The value is graded instead of a simple ``changed or not changed''. This is the
 main difference from an IP pin: a small move inside the same network costs
 little, while leaving the /16 network costs the full value.
 
-\textbf{V3: Binding fork.} V3 does not look at the size of a change but at its
-shape. It is 1.00 when the binding of the current request differs from the
-binding of the previous request but matches a binding that is still in the
-list of recent bindings. Consider two sessions:
+\textbf{Old client back, the binding fork ($F$).} It does not look at the size
+of a change but at its shape. It is 1.00 when the client of the current request
+differs from the previous request's client but is already in the list of recent
+clients:
 \begin{center}
 \begin{tabular}{@{}l@{\quad}l@{}}
 Legitimate move: & \texttt{A A A A B B B B}\\
 Concurrent hijack: & \texttt{A A A B A B A}
 \end{tabular}
 \end{center}
-In the first session, $B$ is new, so V3 stays 0. In the second, $A$ returns after
-$B$ has appeared. A single client that moves once cannot keep producing this
-pattern, while two clients sharing one session cannot avoid it. The fork
-therefore suggests that two different clients are using the same session at the
-same time. Since the binding includes the full IP address, two hosts that
-alternate inside the same /24 are still seen as two bindings.
+In the first session, $B$ is new, so $F$ stays 0. In the second, $A$ returns
+after $B$ has appeared. A single client that moves once does not produce this
+pattern, while two clients sharing one session cannot avoid it. The fork is
+therefore a strong sign that two clients use the same session, although it does
+not prove an attack.
 
-\subsection{Risk Score}
+\subsection{Risk Score and Threshold}
 
 The three values are combined into a risk score for every request:
 \begin{equation}
-R = w_1 V_1 + w_2 V_2 + w_3 V_3 .
+R = 0.3718\,U + 0.3301\,N + 0.2981\,F ,
 \end{equation}
-The weights are positive and add up to one, so $R$ lies between 0 and 1. They
-come from how rare each check is on normal traffic: a check that seldom fires on
-benign requests is stronger evidence and receives a larger weight. Concretely,
-each weight is proportional to $\ln\bigl(1/(\varepsilon_i+0.01)\bigr)$, where
-$\varepsilon_i$ is the average value of check $i$ on attack-free requests. The
-session keeps its peak risk $R_{\max}$, the highest request risk seen so far.
-
-\subsection{Calibrated Threshold}
-
-The threshold $\tau$ is selected from benign sessions so that no more than about
-1\% of the calibration sessions would trigger an alert. SICA replays the
-attack-free calibration sessions, records the peak risk of each one, and picks
-the smallest observed peak that keeps at most 1\% of the sessions at or above it.
-We scan the observed values instead of taking a plain percentile because many
-sessions share exactly the same peak, and a percentile that lands on a tied
-value could let too many sessions through. A session is alerted as soon as
-$R_{\max}\ge\tau$. There is one threshold per dataset, nothing is learned per
-user, and no attack labels are used anywhere.
+and the first request of a session has $R=0$. The weights are fixed constants
+that add up to one; they were derived once from attack-free W1 sessions, where a
+check that rarely fires on normal traffic received a larger weight. The session
+decision uses its peak risk $R_{\max}$:
+\begin{center}
+$R_{\max}\ge 0.6282 \Rightarrow$ ALERT, \qquad $R_{\max}< 0.6282 \Rightarrow$ ALLOW.
+\end{center}
+The threshold equals the network weight plus the fork weight. A network change
+alone (0.3301) or a User-Agent change alone (0.3718) stays below it, while a
+network and User-Agent change together (0.7019) or an old client returning from
+another network (0.6282) reaches it. Nothing is learned per user or per dataset.
 
 \subsection{Overall Workflow}
 
-Fig.~\ref{fig:arch} shows the complete pipeline, from the raw access log to the
-final decision. Calibration is done once per dataset on attack-free sessions;
-after that, the weights and threshold are fixed and every new request is
-processed in constant time.
+Fig.~\ref{fig:arch} shows the complete pipeline, from the access log to the
+final decision. The whole detector is one plain Python file (\texttt{run.py})
+using only the standard library, with constant work per request.
 
 \begin{figure}[t]
 \centering
 \input{figures/report_architecture}
-\caption{SICA architecture. Access-log requests are grouped into sessions and
-turned into client bindings. Three checks score each request, their weighted sum
-gives the session risk, and a threshold calibrated on attack-free sessions
-decides ALLOW or ALERT. Every alert names the checks that caused it.}
+\caption{SICA workflow. Each request becomes a client binding, three checks
+compare it with the session's reference and recent clients, the weighted sum
+gives the risk, and the session's peak risk is compared with the fixed
+threshold 0.6282.}
 \label{fig:arch}
 \end{figure}
 
 \textbf{Architecture blocks.} The workflow in Fig.~\ref{fig:arch} runs as follows.
 \begin{enumerate}
-\item \emph{Access logs.} The server provides its normal access-log records.
-\item \emph{Session reconstruction.} Public logs contain no session cookies, so
-requests are grouped by (IP, User-Agent), and a new session starts after 30
-minutes of inactivity. Sessions with fewer than 7 requests are dropped.
+\item \emph{Access logs.} Requests with session ID, IP address and User-Agent.
+\item \emph{Track session.} Requests are grouped by session ID in arrival order;
+the session keeps its reference client, last client and last four clients.
 \item \emph{Client binding.} Each request is converted into the seven-field
 binding described above.
-\item \emph{Checks.} V1, V2 and V3 compare the binding with the reference and
-with the recent bindings of the session.
-\item \emph{Risk score.} The values form the weighted risk $R$ and update the
-session peak.
-\item \emph{Threshold.} The peak is compared with the calibrated threshold
-$\tau$.
-\item \emph{Decision.} The session is either allowed or alerted.
-\item \emph{Reason.} Each alert lists the checks with a positive value, for
-example \texttt{V2\_scope\_discontinuity=1.00|}\allowbreak\texttt{V3\_binding\_fork=1.00}, so an
-operator can see why it fired.
+\item \emph{Checks.} $U$, $N$ and $F$ compare the binding with the reference and
+with the recent clients.
+\item \emph{Risk score.} The values form the weighted risk $R$, and the session
+keeps its highest value $R_{\max}$.
+\item \emph{Decision.} $R_{\max}$ is compared with 0.6282: ALLOW or ALERT.
 \end{enumerate}
+In the manual mode of the program, every request also prints which changes
+were found, so each alert can be explained.
 
 \subsection{Worked Example}
 
-Table~\ref{tab:example} traces two short sessions with the real calibrated
-values of our W1 run for seed~0: $w_1=0.3718$, $w_2=0.3301$, $w_3=0.2981$ and
-$\tau=0.6282$. Binding $A$ and binding $B$ have the same browser but lie in
-different /16 networks, so $V_1=0$ throughout.
+Table~\ref{tab:example} traces two short sessions. Client $A$ and client $B$
+have the same browser but lie in different /16 networks, so $U=0$ throughout.
 
 \begin{table}[t]
 \centering
-\caption{Worked example with the W1 seed-0 weights and threshold ($\tau=0.6282$).}
+\caption{Worked example with the weights and threshold used in \texttt{run.py}.}
 \label{tab:example}
 \footnotesize
 \setlength{\tabcolsep}{3.6pt}
@@ -287,27 +273,24 @@ Hijack & A & A & B & A & B & & & \\
 \end{tabular}
 \end{table}
 
-In the legitimate session, request 4 moves to a new /16, so $V_2=1$ and
+In the legitimate session, request 4 moves to a new /16, so $N=1$ and
 $R=0.3301$. The reference then moves to $B$, and the remaining requests score 0.
-The peak stays below $\tau$ and the session is allowed. In the hijacked session,
-request 3 looks exactly like that same move. At request 4, however, the victim's
-binding $A$ returns while it is still in the recent list, so $V_3=1$, and the
-/16 has changed again relative to the reference $B$, so $V_2=1$. The risk becomes
-$0.3301+0.2981=0.6282$, which reaches the threshold, and the session is alerted
-with the reason ``V2 and V3''. In this run the threshold is exactly this value,
-because benign sessions that switch back and forth between two networks produced
-the same peak during calibration.
+The peak stays below the threshold and the session is allowed. In the hijacked
+session, request 3 looks exactly like that same move. At request 4, however,
+the victim's client $A$ returns while it is still in the recent list, so $F=1$,
+and the /16 has changed again relative to the reference $B$, so $N=1$. The risk
+becomes $0.3301+0.2981=0.6282$, which reaches the threshold, and the session is
+alerted.
 
 \subsection{Legitimate Mobility versus Hijacking}
 
 SICA separates the two cases by the shape of the change. A one-way move, such as
 a new address or a browser update, is charged once, after which the reference
-follows the user. A concurrent hijack keeps bringing an earlier binding back,
-which triggers V3 and, when the networks differ, V2 as well. Two cases remain
-hard. A device that keeps switching between two networks (interface flapping)
-also alternates, and it causes most of SICA's false alarms. A silent takeover
-with a copied User-Agent produces the same log as a one-way move, so SICA
-allows it.
+follows the user. A concurrent hijack brings an earlier client back, which
+triggers $F$ and, when the networks differ, $N$ as well. Two cases remain hard.
+A device that keeps switching between two networks (interface flapping) also
+alternates and would be alerted. A silent takeover with a copied User-Agent
+produces the same log as a one-way move, so SICA allows it.
 
 % =====================================================================
 \section{Results}
@@ -316,112 +299,110 @@ allows it.
 \subsection{Experimental Setup}
 
 We used two public sample logs from the Elastic Examples repository. W1 is an
-Apache log of a personal technical website with 10,000 requests, which gave 254
-sessions. W2 is an Nginx demonstration log with 51,462 requests, mostly from
-Debian and Ubuntu package clients (APT), which gave 3,126 sessions. In each dataset the earlier
-half of the sessions was used for calibration and the later half for
-evaluation. No public dataset labels hijacked HTTP sessions, so we injected
-hijacks into the evaluation half: each session was chosen as a victim with
-probability 0.2, and the attacker's requests were real requests from another
-client of the same server, with the address and User-Agent set according to
-the attacker level. Six
-attacker levels were tested, from an attacker on another network with their own
-browser (L0) to one who copies the victim's exact binding (L4), each in
-takeover and concurrent mode. Because grouping by (IP, User-Agent) makes every
-session binding-constant, we also simulated legitimate mobility: 15\% of benign
-sessions received a one-way change (new address, browser update, or both) and
-5\% received interface flapping. All results are averaged over 30 random seeds
-at the 1\% alert budget.
+Apache log of a personal technical website (10,000 requests); W2 is an Nginx
+demonstration log (51,462 requests), mostly from Debian and Ubuntu package
+clients (APT). The logs contain no session cookies, so we rebuilt sessions with
+project-specific rules: requests with the same IP address and User-Agent, a new
+session after a pause of more than 30 minutes, and at least 7 requests. The
+first 100 sessions of each log form the samples used by SICA: 1,485 requests
+for W1 and 1,395 for W2.
+
+The logs contain no confirmed real attacks, so the hijacks are \emph{simulated}.
+Every fifth session (20 per dataset) received attacker requests at its middle,
+sent from the IP address of another session in a different /16 network. Four
+types rotate, five sessions each: concurrent (two attacker requests, the victim
+keeps browsing) and takeover (the attacker replaces the second half), each with
+the attacker's own User-Agent or a copy of the victim's. The other 80 sessions
+are unchanged real traffic. In addition, 8 hand-made deterministic test cases
+(Table~\ref{tab:tests}) each store an expected decision.
 
 \subsection{Main Results}
 
-Table~\ref{tab:results} gives the main results together with the IP pinning
-baseline evaluated on the same sessions.
+Table~\ref{tab:results} gives the results of \texttt{python run.py -{}-data}.
 
 \begin{table}[t]
 \centering
-\caption{Main results at the 1\% alert budget (mean of 30 seeds) and the IP
-pinning baseline on the same sessions.}
+\caption{Results on the two 100-session samples (20 simulated hijacks each).}
 \label{tab:results}
 \footnotesize
 \setlength{\tabcolsep}{3.4pt}
-\begin{tabular}{@{}llccccc@{}}
+\begin{tabular}{@{}lccccc@{}}
 \toprule
-Detector & Data & ROC AUC & Recall & FPR & Precision & PR AUC \\
+Dataset & Sessions & Requests & Sim.\ hijacks & Detected & False alarms \\
 \midrule
-SICA & W1 & 0.884 & 0.358 & 0.85\% & 0.906 & 0.742 \\
-SICA & W2 & 0.851 & 0.229 & 0.56\% & 0.920 & 0.667 \\
-\midrule
-IP pinning & W1 & n/a & 0.711 & 15.26\% & 0.489 & n/a \\
-IP pinning & W2 & n/a & 0.695 & 15.05\% & 0.527 & n/a \\
+W1 & 100 & 1,485 & 20 & 15 & 0 / 80 \\
+W2 & 100 & 1,395 & 20 & 13 & 0 / 80 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\begin{figure}[t]
+\begin{table}[t]
 \centering
-\includegraphics[width=0.82\columnwidth]{figures/roc.pdf}
-\caption{ROC curves over the session peak risk for one representative seed
-(seed~0, AUC 0.850 on W1 and 0.843 on W2; the 30-seed means are 0.884 and
-0.851). The circles mark the operating point of the calibrated threshold.}
-\label{fig:roc}
-\end{figure}
+\caption{Deterministic test cases (\texttt{python run.py -{}-test}): 8/8 passed.}
+\label{tab:tests}
+\footnotesize
+\setlength{\tabcolsep}{3.4pt}
+\begin{tabular}{@{}rlcc@{}}
+\toprule
+\# & Test case & Risk & Expected = Got \\
+\midrule
+1 & Normal session & 0.0000 & ALLOW \\
+2 & New IP in the same subnet & 0.0495 & ALLOW \\
+3 & Network change only & 0.3301 & ALLOW \\
+4 & Browser version update & 0.1301 & ALLOW \\
+5 & User-Agent change only & 0.3718 & ALLOW \\
+6 & Network + User-Agent change & 0.7019 & ALERT \\
+7 & Hijack, copied UA, victim continues & 0.6282 & ALERT \\
+8 & Hijack, same IP, other browser, victim cont. & 0.6699 & ALERT \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-On both datasets SICA kept the false-positive rate below 1\% on average, and
-more than nine out of ten alerts were real hijacks. When SICA alerted, it did so
-early, after a median of 1.4 (W1) and 2.5 (W2) attacker requests. Recall,
-however, was limited: SICA found about a third of the hijacks on W1 and fewer
-than a quarter on W2. The ROC curves in Fig.~\ref{fig:roc} show why. They
-rise steeply at low false-positive rates and then flatten: one group of hijacks
-receives a high peak risk, while many others receive the same low peak as a
-benign one-way move, or no risk at all. SICA therefore favours a controlled false-alarm rate over
-maximum attack coverage. IP pinning caught about 70\% of the hijacks but alarmed
-on about 15\% of benign sessions. SICA is not better than pinning at finding
-attacks, and several pinning rules reach a higher F$_1$ score. Its advantage is
-a false-alarm rate that is an order of magnitude lower and chosen in advance,
-together with an explanation for every alert. When hijacks are rare, this
-matters more than raw coverage~\cite{axelsson2000baserate}. The budget can
-also be relaxed: at 5\%, recall rose to 0.646 (W1) and 0.445 (W2) with a
-false-positive rate of 4.4\% and 3.9\%.
+No normal session was alerted: every normal session in both samples kept one
+client from start to end and scored a peak risk of 0. All 10 concurrent hijacks
+per dataset were detected. Takeovers with the attacker's own User-Agent were
+detected in 5 of 5 cases on W1 and 3 of 5 on W2, where two attackers used an APT
+client that differed from the victim's only in version ($0.1301+0.3301=0.4602$).
+All 10 takeovers with a copied User-Agent were missed with risk 0.3301, exactly
+the score of a legitimate network change. All 8 test cases produced their
+expected decision.
 
 \subsection{What SICA Detects and Misses}
 
-Detection depends on what the attacker changes and on whether the victim keeps
-browsing. Against an attacker on another network with their own browser (L0) in
-concurrent mode, recall was 0.993 on W1 and 0.893 on W2. When the attacker
-copied the User-Agent from another network (L1), V1 could not fire, but the
-binding fork still caught 70\% (W1) and 72\% (W2) of the concurrent attacks. The
-same attack as a silent takeover was almost never caught (recall 0.002 and
-0.001), because it looks like a one-way move. An attacker with the victim's
-exact IP address and User-Agent (L4) cannot be detected from these fields at all.
-On the benign side, address changes within a /16 and browser updates never
-caused an alert, while interface flapping across /16 networks alerted in about
-58\% of such sessions and caused most false alarms.
+SICA is strongest when two clients share a session: the victim's return creates
+a binding fork, and the alert fires as soon as that happens, whether or not the
+attacker copies the User-Agent. A change of network and User-Agent at the same
+time is also alerted. A single change of network or of User-Agent alone is
+allowed on purpose, because honest users produce such changes. An attacker who
+takes over completely and copies the User-Agent is therefore missed, and an
+attacker with the victim's exact IP address and User-Agent cannot be seen in
+these fields at all.
 
-\textbf{Limitations.} The attacks were injected into real traffic rather than captured from real
-incidents, and the benign mobility rates are our assumptions. Both logs are
-public samples; W2 is demonstration data with only three URLs, and the minute
-field of both logs is degenerate, so we make no timing claims. Sessions were
-rebuilt from (IP, User-Agent) rather than taken from real cookies.
+\textbf{Limitations.} The attacks are simulated rather than captured from real
+incidents, and the samples are small (100 sessions each, rebuilt from IP and
+User-Agent rather than real cookies), so the normal sessions contain no
+legitimate client changes and the zero false-alarm result is optimistic. The
+weights and the threshold are fixed and not tuned per site. SICA sees only
+log fields: no packets, cookies or page content. Legitimate network changes and
+interface flapping can look like the patterns above.
 
 % =====================================================================
 \section{Conclusion}
 % =====================================================================
 
-In this project we built SICA, a lightweight detector that looks for
-mid-session HTTP session hijacking using only the web server's access logs. SICA
-describes each request by a client binding, scores agent changes, graded
-network changes and the binding fork, and compares the session's peak risk with
-a threshold calibrated on attack-free sessions. The project showed that
-server-log-only detection is practical for one clear case: two clients using
-the same session at the same time from different networks or different
-browsers. On two public datasets, SICA kept the false-positive rate at 0.85\% and
-0.56\% with precision above 0.9, while IP pinning alarmed on about 15\% of benign
-sessions. Its recall was low (0.358 and 0.229). SICA cannot detect an attacker
-who reproduces the victim's binding closely enough, and silent takeovers are
-often indistinguishable from normal mobility. The next stage of the project can
-investigate a larger and more diverse set of real-world logs and richer signals
-while keeping the design lightweight and interpretable.
+In this project we built SICA, a lightweight rule/risk-based detector that looks
+for mid-session HTTP session hijacking using only the web server's access-log
+information. SICA describes each request by a client binding, scores User-Agent
+changes, graded network changes and the binding fork, and compares the
+session's peak risk with a fixed threshold of 0.6282. The final implementation
+is a single plain Python file without machine learning. On the W1 and W2
+samples it detected 15 and 13 of 20 simulated hijacks with no false alarm, and
+it passed all 8 test cases. The project showed that log-only detection is
+practical for one clear case: two clients using the same session, one of which
+returns. Silent takeovers with a copied User-Agent remain indistinguishable
+from normal mobility. Future work can use larger real logs with real session
+cookies and legitimate client changes while keeping the design simple and
+explainable.
 
 \bibliographystyle{IEEEtran}
 \bibliography{report}

@@ -1,0 +1,9 @@
+test_id,name,expected,got,risk,status
+1,Normal session (same IP and browser),ALLOW,ALLOW,0.0000,PASS
+2,New IP in the same subnet (DHCP renewal),ALLOW,ALLOW,0.0495,PASS
+3,Network change only (Wi-Fi to mobile data),ALLOW,ALLOW,0.3301,PASS
+4,Browser version update only,ALLOW,ALLOW,0.1301,PASS
+5,User-agent change only (same IP),ALLOW,ALLOW,0.3718,PASS
+6,Network and user-agent change together,ALERT,ALERT,0.7019,PASS
+7,Hijack with copied user-agent while the victim keeps browsing,ALERT,ALERT,0.6282,PASS
+8,Hijack from the same IP (shared NAT) with another browser,ALERT,ALERT,0.6699,PASS
