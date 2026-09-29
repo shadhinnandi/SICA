@@ -146,14 +146,19 @@ def network_score(client, ref):
     return 0.0
 
 
-def check_session(requests):
-    """Score every request of one session. requests = [(ip, user_agent), ...]"""
+def client_of(row):
+    """One dataset row -> client (ip, browser, version, os, device)."""
+    return (row["ip_address"], row["browser"], row["browser_version"],
+            row["operating_system"], row["device_type"])
+
+
+def check_session(clients):
+    """Score every request of one session. clients = [(ip, browser, version, os, device), ...]"""
     steps = []
     ref = last = None
     recent = []
 
-    for ip, ua in requests:
-        client = (ip,) + parse_agent(ua)
+    for client in clients:
         if ref is None:
             ref = last = client
             recent = [client]
@@ -213,7 +218,7 @@ def run_datasets():
         alerts = caught = attacks = false_alarms = 0
 
         for sid, reqs in sessions.items():
-            steps = check_session([(r["ip"], r["user_agent"]) for r in reqs])
+            steps = check_session([client_of(r) for r in reqs])
             peak = max(s["risk"] for s in steps)
             result = decide(peak)
             attacked = any(r["attack"] == "1" for r in reqs)
@@ -242,7 +247,7 @@ def run_tests():
     passed = 0
 
     for test_id, reqs in cases.items():
-        steps = check_session([(r["ip"], r["user_agent"]) for r in reqs])
+        steps = check_session([client_of(r) for r in reqs])
         peak = max(s["risk"] for s in steps)
         got = decide(peak)
         expected = reqs[0]["expected"]
@@ -304,14 +309,15 @@ def manual_test():
             ua = requests[-1][1] if requests else "-"
         ua = AGENTS.get(ua.lower(), ua)
         requests.append((ip, ua))
+        clients = [(i,) + parse_agent(u) for i, u in requests]
 
         if n == 1:
             print("  First request: client recorded for this session (risk 0)")
         else:
-            describe(check_session(requests)[-1])
+            describe(check_session(clients)[-1])
 
     if len(requests) > 1:
-        peak = max(s["risk"] for s in check_session(requests))
+        peak = max(s["risk"] for s in check_session(clients))
         print(f"\nSession {sid}: {len(requests)} requests, highest risk {peak:.4f}  ->  {decide(peak)}")
 
 

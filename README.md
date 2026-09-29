@@ -121,7 +121,54 @@ these project-specific rules:
 - a session needs at least 7 requests
 - the first 100 sessions (by start time) are kept
 
-Sample columns: `session_id, time, ip, user_agent, path, attack`.
+### Dataset Columns
+
+`make_samples.py` splits each raw User-Agent string into the fields SICA
+compares, so the samples contain only the client information the detector uses.
+W1 and W2 have the same columns:
+
+| Column | Meaning | Example |
+|---|---|---|
+| `session_id` | Session identifier | `W1-030` |
+| `request_no` | Request order inside the session (starts at 1) | `10` |
+| `timestamp` | Request time from the original log | `2015-05-17 21:05:25` |
+| `ip_address` | Client IP address | `151.225.221.231` |
+| `browser` | Browser or client program | `Chrome`, `Firefox`, `APT`, `Bot` |
+| `browser_version` | Major version (the part SICA compares) | `27` |
+| `operating_system` | Client operating system | `Linux`, `Windows`, `Ubuntu` |
+| `device_type` | Device class | `Desktop`, `Mobile` |
+| `attack` | `0` = normal request, `1` = simulated attacker request | `1` |
+
+Special values come straight from the original log: `unknown` means the log had
+no User-Agent (`-`), `Other` means the program or OS is not one the parser
+recognises (for example crawlers and feed readers), and a `browser_version` of
+`-` means the client did not advertise a version.
+
+**One session is not one row.** Each session keeps all of its requests in order
+(7 to 108 rows per session), because SICA detects changes *between* requests of
+the same session. A session with a simulated hijack looks like this
+(`data/W1_sample.csv`, session `W1-030`, 20 requests):
+
+```text
+request_no  ip_address        browser  version  OS     device   attack   risk
+9           99.252.100.83     Chrome   27       Linux  Desktop  0        0.0000   victim
+10          151.225.221.231   Chrome   27       Linux  Desktop  1        0.3301   attacker appears
+11          151.225.221.231   Chrome   27       Linux  Desktop  1        0.0000
+12          99.252.100.83     Chrome   27       Linux  Desktop  0        0.6282   victim returns
+```
+
+```text
+Request 10: network change (different /16)       -> 0.3301
+Request 12: network change + old client returns  -> 0.3301 + 0.2981 = 0.6282
+Decision  : 0.6282 >= 0.6282                     -> ALERT
+```
+
+After the fork the reference stays with the other client, so the victim's
+later requests (13–20) keep showing a network change (0.3301). The session was
+already alerted at request 12.
+
+Attacker rows reuse the timestamps of the victim rows they were copied from, so
+inside an attacked session `request_no`, not `timestamp`, gives the order.
 
 ### Simulated Attack Cases
 

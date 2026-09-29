@@ -71,7 +71,10 @@ Constants in `make_samples.py` (used only when rebuilding the samples):
 6. Version: for the browser's markers in `VERSION_AT`, find the marker and take
    the first number after it (the major version). Empty if none is found.
 
-**Called by:** `check_session()`.
+**Called by:** `manual_test()` (typed User-Agents) and `make_samples.py` (to
+create the `browser`, `browser_version`, `operating_system` and `device_type`
+columns of the W1/W2 samples; an empty version is written as `-`). Dataset and
+test mode do not call it, because their CSV files already contain these columns.
 
 ---
 
@@ -121,20 +124,33 @@ but different /24 → 0.45; same /24 but different IP → 0.15; same IP → 0.0.
 
 ---
 
-### Function: `check_session(requests)`
+### Function: `client_of(row)`
+
+**Purpose:** Turn one CSV row into a client.
+
+**Inputs:** a row dictionary from `load_sessions()` with the columns
+`ip_address`, `browser`, `browser_version`, `operating_system`, `device_type`.
+
+**Output:** the tuple `(ip, browser, version, os, device)`, e.g.
+`("99.252.100.83", "Chrome", "27", "Linux", "Desktop")`.
+
+**Called by:** `run_datasets()`, `run_tests()`.
+
+---
+
+### Function: `check_session(clients)`
 
 **Purpose:** The detector. Score every request of one session.
 
-**Inputs:** `requests`, a list of `(ip, user_agent)` pairs in the order they
-happened.
+**Inputs:** `clients`, one tuple `(ip, browser, version, os, device)` per
+request, in the order they happened (`request_no` order).
 
 **Output:** a list with one dictionary per request:
 `{"agent": ..., "network": ..., "fork": ..., "risk": ...}`.
 
 **How it works:**
 1. Start with no reference client, no last client, empty recent list.
-2. For each request build `client = (ip, browser, version, os, device)` using
-   `parse_agent()`.
+2. Take the clients one by one.
 3. **First request:** it becomes the reference and the last client, the recent
    list becomes `[client]`, and all scores are 0.
 4. **Later requests:**
@@ -207,7 +223,7 @@ header and rows with `csv.writer`. An existing file is overwritten.
 
 **How it works:** For W1 and W2:
 1. `load_sessions(path, "session_id")`.
-2. For each session: `check_session()` on its (ip, user_agent) pairs, take the
+2. For each session: `check_session()` on `client_of(row)` for its rows, take the
    highest risk (`peak`), `decide(peak)`.
 3. A session is a simulated hijack if any row has `attack == "1"`.
 4. Count alerts, detected hijacks, and false alarms (ALERT on a normal session).
@@ -230,7 +246,8 @@ header and rows with `csv.writer`. An existing file is overwritten.
 
 **How it works:**
 1. `load_sessions(TEST_FILE, "test_id")`; each test is a small session.
-2. For each test: `check_session()`, highest risk, `decide()` → **Got**.
+2. For each test: `check_session()` on `client_of(row)` for its rows, highest
+   risk, `decide()` → **Got**.
 3. **Expected** is the `expected` column of the test's first row.
 4. PASS if Got equals Expected, otherwise FAIL.
 5. Save `test_id, name, expected, got, risk, status`.
@@ -292,7 +309,8 @@ ends (EOF, e.g. when input is piped from a file).
      previous one (`-`, i.e. unknown, for the first request); `done` or `q`
      finishes.
    - Request 1 prints "First request: client recorded for this session (risk 0)".
-   - Later requests run `check_session()` on everything typed so far and
+   - Each typed (IP, User-Agent) becomes a client with `parse_agent()`.
+   - Later requests run `check_session()` on all clients typed so far and
      `describe()` the last request.
 3. If at least two requests were entered, print the highest risk and the
    session's ALLOW/ALERT.
@@ -350,4 +368,4 @@ Only needed to rebuild `data/W1_sample.csv` and `data/W2_sample.csv`.
 | `make_sessions(rows)` | Groups requests by (IP, User-Agent), starts a new session after a pause > 30 min (`IDLE_GAP`), keeps sessions with ≥ 7 requests (`MIN_REQUESTS`), sorts by start time, returns the first 100 (`N_SESSIONS`). |
 | `network(ip)` | Returns the /16 part of an IP (first two numbers). |
 | `add_attack(victim, attacker, kind)` | Adds a simulated hijack at the middle of the victim session. Attacker rows get the attacker's IP, the victim's or the attacker's User-Agent (for `copied_ua` types), and `attack=1`. *Concurrent*: inserts 2 attacker requests and the victim continues. *Takeover*: attacker replaces the second half. |
-| `main()` | For W1 and W2: builds the sessions, adds an attack to every 5th session (the attacker is the next session from a different /16 network; the 4 types rotate), writes the CSV and prints how many sessions were written. |
+| `main()` | For W1 and W2: builds the sessions, adds an attack to every 5th session (the attacker is the next session from a different /16 network; the 4 types rotate), splits each User-Agent with `parse_agent()` (imported from `run.py`), and writes one row per request: `session_id, request_no, timestamp, ip_address, browser, browser_version, operating_system, device_type, attack`. |

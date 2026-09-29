@@ -13,8 +13,11 @@ main block / menu()  ->  choose a mode
 load_sessions()  or  manual input      (rows grouped by session)
         |
         v
+client_of(row)   (CSV)   or   parse_agent(User-Agent)   (manual)
+        -> client = (ip, browser, version, OS, device)
+        |
+        v
 check_session()  for each session
-   |-- parse_agent()     User-Agent -> browser, version, OS, device
    |-- agent_score()     User-Agent change vs reference
    |-- network_score()   network change vs reference   (uses subnets())
    |-- fork check        old client back?
@@ -53,10 +56,13 @@ print on screen  +  save_csv() into results/
 
 ## Step 3: Data is loaded
 
-- **In:** a CSV file. `data/W1_sample.csv` / `data/W2_sample.csv` have columns
-  `session_id, time, ip, user_agent, path, attack`; `data/test_cases.csv` has
-  `test_id, name, expected, ip, user_agent`. In manual mode the data comes from
-  the keyboard instead.
+- **In:** a CSV file with **one row per request**. `data/W1_sample.csv` /
+  `data/W2_sample.csv` have the columns
+  `session_id, request_no, timestamp, ip_address, browser, browser_version,
+  operating_system, device_type, attack`; `data/test_cases.csv` has
+  `test_id, name, expected, request_no, ip_address, browser, browser_version,
+  operating_system, device_type`. In manual mode the data comes from the
+  keyboard instead.
 - **What happens:** every row becomes a dictionary.
 - **Out:** rows.
 - **Function:** `load_sessions()` (files), `manual_test()` + `ask()` (keyboard).
@@ -65,22 +71,26 @@ print on screen  +  save_csv() into results/
 
 - **In:** rows.
 - **What happens:** rows with the same `session_id` (or `test_id`) are put in one
-  list, in file order. Only `ip` and `user_agent` are passed to the detector.
+  list, in file order (= `request_no` order). A session is many rows, not one,
+  because the detector compares each request with the earlier ones.
   (The session IDs themselves were created earlier by `make_samples.py`, which
   rebuilt sessions from the original logs using IP + User-Agent, a 30-minute
   pause rule and at least 7 requests.)
-- **Out:** `{session_id: [rows]}` → for each session a list of `(ip, user_agent)`.
-- **Function:** `load_sessions()`; the list is built in `run_datasets()` /
-  `run_tests()`.
+- **Out:** `{session_id: [rows]}`.
+- **Function:** `load_sessions()`.
 
-## Step 5: The User-Agent is parsed
+## Step 5: Each request becomes a client
 
-- **In:** a User-Agent string.
-- **What happens:** the string is matched against the `BROWSERS`, `SYSTEMS` and
-  `VERSION_AT` rules.
-- **Out:** `(browser, version, os, device)`, e.g. `("Chrome", "120", "Windows", "Desktop")`.
-  Together with the IP this is the **client**: `(ip, browser, version, os, device)`.
-- **Function:** `parse_agent()`, called inside `check_session()`.
+- **In:** one row (CSV modes) or a typed IP + User-Agent (manual mode).
+- **What happens:** CSV rows already contain the split fields, so `client_of()`
+  just takes `ip_address, browser, browser_version, operating_system,
+  device_type`. In manual mode the typed User-Agent string is matched against
+  the `BROWSERS`, `SYSTEMS` and `VERSION_AT` rules by `parse_agent()`. (The same
+  function created the W1/W2 columns inside `make_samples.py`.)
+- **Out:** the **client** `(ip, browser, version, os, device)`, e.g.
+  `("203.0.113.25", "Chrome", "120", "Windows", "Desktop")`.
+- **Function:** `client_of()` in `run_datasets()` / `run_tests()`;
+  `parse_agent()` in `manual_test()`.
 
 ## Step 6: The client is tracked
 
@@ -157,12 +167,12 @@ fork) the reference moves to the new client.
 
 Rows of test 7 in `data/test_cases.csv`:
 
-| # | IP | User-Agent |
-|---|---|---|
-| 1 | 203.0.113.25 | Chrome 120 on Windows |
-| 2 | 203.0.113.25 | Chrome 120 on Windows |
-| 3 | 192.0.2.77 | Chrome 120 on Windows (copied) |
-| 4 | 203.0.113.25 | Chrome 120 on Windows |
+| request_no | ip_address | browser | browser_version | operating_system | device_type |
+|---|---|---|---|---|---|
+| 1 | 203.0.113.25 | Chrome | 120 | Windows | Desktop |
+| 2 | 203.0.113.25 | Chrome | 120 | Windows | Desktop |
+| 3 | 192.0.2.77 | Chrome | 120 | Windows | Desktop (copied by the attacker) |
+| 4 | 203.0.113.25 | Chrome | 120 | Windows | Desktop |
 
 Call victim client A and attacker client B.
 

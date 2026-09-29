@@ -40,6 +40,16 @@ server can see in its log. In SICA a client is:
   `Mozilla/5.0 (Windows NT 10.0; Win64; x64) ... Chrome/120.0.0.0 Safari/537.36`
   becomes `Chrome, 120, Windows, Desktop`.
 
+In the W1/W2 datasets this split is already done: `make_samples.py` stores each
+request as one row with separate columns `ip_address, browser, browser_version,
+operating_system, device_type`, so a client is simply those five values. Only
+the manual test still receives a full User-Agent string and splits it with
+`parse_agent()`.
+
+A session is **many rows**, not one: every request of the session is kept in
+order (`request_no` 1, 2, 3, ...), because a change can only be seen by
+comparing one request with the earlier ones.
+
 For every session SICA keeps:
 
 - a **reference client**: the client the session currently belongs to
@@ -166,10 +176,13 @@ enough for ALERT.
 
 ## 9. Complete workflow
 
-1. **Input.** A CSV of requests (`session_id, time, ip, user_agent, path, attack`)
+1. **Input.** A CSV with one row per request (`session_id, request_no, timestamp,
+   ip_address, browser, browser_version, operating_system, device_type, attack`)
    or requests typed by hand.
-2. **Group.** Requests are grouped by `session_id`, keeping their order.
-3. **Parse.** Each User-Agent becomes (browser, version, OS, device).
+2. **Group.** Rows are grouped by `session_id`, keeping their order.
+3. **Client.** Each row becomes a client (ip_address, browser, browser_version,
+   operating_system, device_type). In manual mode the typed User-Agent is first
+   split into these fields by `parse_agent()`.
 4. **First request.** It becomes the reference client and the last client; risk 0.
 5. **Every next request.**
    - compare its User-Agent with the reference → `user_agent_change`

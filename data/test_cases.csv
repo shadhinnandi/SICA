@@ -1,33 +1,33 @@
-test_id,name,expected,ip,user_agent
-1,Normal session (same IP and browser),ALLOW,203.0.113.25,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-1,Normal session (same IP and browser),ALLOW,203.0.113.25,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-1,Normal session (same IP and browser),ALLOW,203.0.113.25,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-1,Normal session (same IP and browser),ALLOW,203.0.113.25,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-2,New IP in the same subnet (DHCP renewal),ALLOW,203.0.113.25,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-2,New IP in the same subnet (DHCP renewal),ALLOW,203.0.113.25,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-2,New IP in the same subnet (DHCP renewal),ALLOW,203.0.113.80,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-2,New IP in the same subnet (DHCP renewal),ALLOW,203.0.113.80,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-3,Network change only (Wi-Fi to mobile data),ALLOW,203.0.113.25,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-3,Network change only (Wi-Fi to mobile data),ALLOW,203.0.113.25,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-3,Network change only (Wi-Fi to mobile data),ALLOW,198.51.100.40,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-3,Network change only (Wi-Fi to mobile data),ALLOW,198.51.100.40,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-4,Browser version update only,ALLOW,203.0.113.25,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-4,Browser version update only,ALLOW,203.0.113.25,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-4,Browser version update only,ALLOW,203.0.113.25,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
-4,Browser version update only,ALLOW,203.0.113.25,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
-5,User-agent change only (same IP),ALLOW,203.0.113.25,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-5,User-agent change only (same IP),ALLOW,203.0.113.25,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-5,User-agent change only (same IP),ALLOW,203.0.113.25,Mozilla/5.0 (X11; Linux x86_64; rv:121.0) Gecko/20100101 Firefox/121.0
-5,User-agent change only (same IP),ALLOW,203.0.113.25,Mozilla/5.0 (X11; Linux x86_64; rv:121.0) Gecko/20100101 Firefox/121.0
-6,Network and user-agent change together,ALERT,203.0.113.25,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-6,Network and user-agent change together,ALERT,203.0.113.25,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-6,Network and user-agent change together,ALERT,192.0.2.77,Mozilla/5.0 (X11; Linux x86_64; rv:121.0) Gecko/20100101 Firefox/121.0
-6,Network and user-agent change together,ALERT,192.0.2.77,Mozilla/5.0 (X11; Linux x86_64; rv:121.0) Gecko/20100101 Firefox/121.0
-7,Hijack with copied user-agent while the victim keeps browsing,ALERT,203.0.113.25,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-7,Hijack with copied user-agent while the victim keeps browsing,ALERT,203.0.113.25,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-7,Hijack with copied user-agent while the victim keeps browsing,ALERT,192.0.2.77,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-7,Hijack with copied user-agent while the victim keeps browsing,ALERT,203.0.113.25,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-8,Hijack from the same IP (shared NAT) with another browser,ALERT,203.0.113.25,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-8,Hijack from the same IP (shared NAT) with another browser,ALERT,203.0.113.25,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-8,Hijack from the same IP (shared NAT) with another browser,ALERT,203.0.113.25,Mozilla/5.0 (X11; Linux x86_64; rv:121.0) Gecko/20100101 Firefox/121.0
-8,Hijack from the same IP (shared NAT) with another browser,ALERT,203.0.113.25,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+test_id,name,expected,request_no,ip_address,browser,browser_version,operating_system,device_type
+1,Normal session (same IP and browser),ALLOW,1,203.0.113.25,Chrome,120,Windows,Desktop
+1,Normal session (same IP and browser),ALLOW,2,203.0.113.25,Chrome,120,Windows,Desktop
+1,Normal session (same IP and browser),ALLOW,3,203.0.113.25,Chrome,120,Windows,Desktop
+1,Normal session (same IP and browser),ALLOW,4,203.0.113.25,Chrome,120,Windows,Desktop
+2,New IP in the same subnet (DHCP renewal),ALLOW,1,203.0.113.25,Chrome,120,Windows,Desktop
+2,New IP in the same subnet (DHCP renewal),ALLOW,2,203.0.113.25,Chrome,120,Windows,Desktop
+2,New IP in the same subnet (DHCP renewal),ALLOW,3,203.0.113.80,Chrome,120,Windows,Desktop
+2,New IP in the same subnet (DHCP renewal),ALLOW,4,203.0.113.80,Chrome,120,Windows,Desktop
+3,Network change only (Wi-Fi to mobile data),ALLOW,1,203.0.113.25,Chrome,120,Windows,Desktop
+3,Network change only (Wi-Fi to mobile data),ALLOW,2,203.0.113.25,Chrome,120,Windows,Desktop
+3,Network change only (Wi-Fi to mobile data),ALLOW,3,198.51.100.40,Chrome,120,Windows,Desktop
+3,Network change only (Wi-Fi to mobile data),ALLOW,4,198.51.100.40,Chrome,120,Windows,Desktop
+4,Browser version update only,ALLOW,1,203.0.113.25,Chrome,120,Windows,Desktop
+4,Browser version update only,ALLOW,2,203.0.113.25,Chrome,120,Windows,Desktop
+4,Browser version update only,ALLOW,3,203.0.113.25,Chrome,121,Windows,Desktop
+4,Browser version update only,ALLOW,4,203.0.113.25,Chrome,121,Windows,Desktop
+5,User-agent change only (same IP),ALLOW,1,203.0.113.25,Chrome,120,Windows,Desktop
+5,User-agent change only (same IP),ALLOW,2,203.0.113.25,Chrome,120,Windows,Desktop
+5,User-agent change only (same IP),ALLOW,3,203.0.113.25,Firefox,121,Linux,Desktop
+5,User-agent change only (same IP),ALLOW,4,203.0.113.25,Firefox,121,Linux,Desktop
+6,Network and user-agent change together,ALERT,1,203.0.113.25,Chrome,120,Windows,Desktop
+6,Network and user-agent change together,ALERT,2,203.0.113.25,Chrome,120,Windows,Desktop
+6,Network and user-agent change together,ALERT,3,192.0.2.77,Firefox,121,Linux,Desktop
+6,Network and user-agent change together,ALERT,4,192.0.2.77,Firefox,121,Linux,Desktop
+7,Hijack with copied user-agent while the victim keeps browsing,ALERT,1,203.0.113.25,Chrome,120,Windows,Desktop
+7,Hijack with copied user-agent while the victim keeps browsing,ALERT,2,203.0.113.25,Chrome,120,Windows,Desktop
+7,Hijack with copied user-agent while the victim keeps browsing,ALERT,3,192.0.2.77,Chrome,120,Windows,Desktop
+7,Hijack with copied user-agent while the victim keeps browsing,ALERT,4,203.0.113.25,Chrome,120,Windows,Desktop
+8,Hijack from the same IP (shared NAT) with another browser,ALERT,1,203.0.113.25,Chrome,120,Windows,Desktop
+8,Hijack from the same IP (shared NAT) with another browser,ALERT,2,203.0.113.25,Chrome,120,Windows,Desktop
+8,Hijack from the same IP (shared NAT) with another browser,ALERT,3,203.0.113.25,Firefox,121,Linux,Desktop
+8,Hijack from the same IP (shared NAT) with another browser,ALERT,4,203.0.113.25,Chrome,120,Windows,Desktop

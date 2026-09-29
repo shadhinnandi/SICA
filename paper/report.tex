@@ -305,7 +305,12 @@ clients (APT). The logs contain no session cookies, so we rebuilt sessions with
 project-specific rules: requests with the same IP address and User-Agent, a new
 session after a pause of more than 30 minutes, and at least 7 requests. The
 first 100 sessions of each log form the samples used by SICA: 1,485 requests
-for W1 and 1,395 for W2.
+for W1 and 1,395 for W2. Each sample is a CSV file with one row per request and
+the structured fields \texttt{session\_id}, \texttt{request\_no},
+\texttt{timestamp}, \texttt{ip\_address}, \texttt{browser},
+\texttt{browser\_version}, \texttt{operating\_system},
+\texttt{device\_type} and \texttt{attack}; the four browser fields are parsed
+from the User-Agent string, and a session keeps all of its requests in order.
 
 The logs contain no confirmed real attacks, so the hijacks are \emph{simulated}.
 Every fifth session (20 per dataset) received attacker requests at its middle,

@@ -50,7 +50,8 @@ python run.py --test
 
 - **Where the tests are:** `data/test_cases.csv`. Each row is one request; rows
   with the same `test_id` form one small session. Columns:
-  `test_id, name, expected, ip, user_agent`.
+  `test_id, name, expected, request_no, ip_address, browser, browser_version,
+  operating_system, device_type`.
 - **expected:** the correct answer written by us in advance (ALLOW or ALERT).
 - **got:** what the detector returns: `check_session()` scores every request,
   the highest risk is taken, and `decide()` turns it into ALLOW/ALERT.
@@ -99,6 +100,11 @@ python run.py --data
   log, mostly Debian/Ubuntu package (APT) clients.
 - In each, 20 sessions contain a **simulated** hijack (`attack=1` rows); the other
   80 are normal traffic from the real logs.
+- Each file has **one row per request** (not one row per session), with the
+  columns `session_id, request_no, timestamp, ip_address, browser,
+  browser_version, operating_system, device_type, attack`. Open either file in
+  Excel or Google Sheets and filter on one `session_id` to see a session's
+  requests in `request_no` order.
 - Every session goes through `check_session()`; the highest risk decides.
 
 Output:
@@ -159,8 +165,10 @@ python make_samples.py
 This reads the original logs (`data/W1/apache_sample_1.log`,
 `data/W2/nginx_real.log`), rebuilds sessions (IP + User-Agent, new session after
 a 30-minute pause, at least 7 requests), keeps the first 100 per dataset, adds a
-simulated hijack to every 5th session and overwrites `data/W1_sample.csv` and
-`data/W2_sample.csv`. It is deterministic, so the files come out the same every
+simulated hijack to every 5th session, splits every User-Agent into
+`browser, browser_version, operating_system, device_type` (with `parse_agent()`
+from `run.py`), drops the columns SICA does not use (URL path, raw User-Agent)
+and overwrites `data/W1_sample.csv` and `data/W2_sample.csv`. It is deterministic, so the files come out the same every
 time. **You do not need to run it**; the samples are already in `data/`. Only run
 it if a sample file is deleted or damaged.
 

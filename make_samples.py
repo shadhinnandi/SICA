@@ -2,13 +2,18 @@
 
     python make_samples.py
 
-Takes the first 100 sessions of each log. The logs contain no real attacks,
-so every 5th session gets a simulated hijack (rows marked attack=1).
+Takes the first 100 sessions of each log and writes one row per request with
+the client fields SICA uses. The User-Agent string is split into browser,
+browser_version (major version), operating_system and device_type with
+parse_agent() from run.py. The logs contain no real attacks, so every 5th
+session gets a simulated hijack (rows marked attack=1).
 """
 import csv
 import os
 import re
 from datetime import datetime
+
+from run import parse_agent
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SOURCES = {"W1": "data/W1/apache_sample_1.log", "W2": "data/W2/nginx_real.log"}
@@ -86,7 +91,8 @@ def main():
 
         with open(out, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f, lineterminator="\n")
-            writer.writerow(["session_id", "time", "ip", "user_agent", "path", "attack"])
+            writer.writerow(["session_id", "request_no", "timestamp", "ip_address", "browser",
+                             "browser_version", "operating_system", "device_type", "attack"])
             n_attacks = 0
             for i, session in enumerate(sessions):
                 if i % 5 == 4:
@@ -96,9 +102,10 @@ def main():
                         j = (j + 1) % len(sessions)
                     session = add_attack(session, sessions[j], ATTACKS[n_attacks % 4])
                     n_attacks += 1
-                for r in session:
-                    writer.writerow([f"{name}-{i + 1:03d}", r["time"], r["ip"],
-                                     r["user_agent"], r["path"], r["attack"]])
+                for n, r in enumerate(session, 1):
+                    browser, version, system, device = parse_agent(r["user_agent"])
+                    writer.writerow([f"{name}-{i + 1:03d}", n, r["time"], r["ip"], browser,
+                                     version or "-", system, device, r["attack"]])
 
         print(f"data/{name}_sample.csv: {len(sessions)} sessions, {n_attacks} with a simulated hijack")
 
