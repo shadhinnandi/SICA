@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SICA: Session Integrity and Continuity Analysis</title>
+  <meta name="description" content="SICA detection engine dashboard: session hijacking detection through client-binding analysis of server access logs.">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- ============================================================
+     HEADER
+============================================================ -->
+<header id="header">
+  <div class="header-brand">
+    <div>
+      <h1>SICA</h1>
+      <div class="subtitle">Session Integrity and Continuity Analysis</div>
+    </div>
+  </div>
+  <div class="status-pill">
+    <span class="dot"></span>
+    Detection Engine Online
+  </div>
+</header>
+
+<!-- ============================================================
+     NAVIGATION
+============================================================ -->
+<nav id="nav">
+  <div class="nav-tab active" data-tab="overview">Overview</div>
+  <div class="nav-tab" data-tab="datasets">Dataset Analysis</div>
+  <div class="nav-tab" data-tab="tests">Test Cases</div>
+  <div class="nav-tab" data-tab="demo">Attack Demonstration</div>
+</nav>
+
+<!-- ============================================================
+     MAIN
+============================================================ -->
+<main id="main">
+
+  <!-- --------------------------------------------------------
+       OVERVIEW TAB
+  -------------------------------------------------------- -->
+  <section id="tab-overview" class="tab-panel active">
+    <h2 class="section-title">Overview</h2>
+    <p class="section-desc">
+      SICA detects session hijacking by analysing <em>client binding</em> in HTTP server access logs.
+      Rather than relying on passwords or tokens, SICA observes whether the network address and
+      browser fingerprint associated with a session change in ways consistent with a session-replay
+      attack. The system is passive; it requires only the access log entries that web servers
+      already produce.
+    </p>
+
+    <!-- Configuration cards (populated by JS from /api/config) -->
+    <h3 class="section-title">Detection Parameters</h3>
+    <div class="card-grid" id="config-cards">
+      <div class="card">
+        <div class="card-label">Alert Threshold</div>
+        <div class="card-value" id="cfg-threshold">…</div>
+        <div class="card-sub">risk ≥ threshold → ALERT</div>
+      </div>
+      <div class="card">
+        <div class="card-label">User-Agent Weight</div>
+        <div class="card-value" id="cfg-wagent">…</div>
+        <div class="card-sub">W<sub>AGENT</sub></div>
+      </div>
+      <div class="card">
+        <div class="card-label">Network Weight</div>
+        <div class="card-value" id="cfg-wnetwork">…</div>
+        <div class="card-sub">W<sub>NETWORK</sub></div>
+      </div>
+      <div class="card">
+        <div class="card-label">Fork Weight</div>
+        <div class="card-value" id="cfg-wfork">…</div>
+        <div class="card-sub">W<sub>FORK</sub></div>
+      </div>
+    </div>
+
+    <!-- Risk formula -->
+    <div class="formula-card">
+      <h3>Risk Formula</h3>
+      <div class="formula" id="formula-display">…</div>
+      <div class="decision-rule">
+        <div>where each signal ∈ [0, 1]. A higher value means a more significant change.</div>
+        <div class="allow-rule">Risk &lt; threshold → ALLOW</div>
+        <div class="alert-rule">Risk ≥ threshold → ALERT</div>
+      </div>
+    </div>
+
+    <!-- Three detection signals -->
+    <h3 class="section-title">Detection Signals</h3>
+    <div class="card-grid card-grid-3">
+
+      <div class="signal-card">
+        <div class="signal-badge badge-agent">User-Agent</div>
+        <h4>Client Fingerprint</h4>
+        <p>
+          SICA parses the <code>User-Agent</code> header of every request to extract the
+          browser family, major version, operating system, and device class.
+          When a session's requests arrive from a different browser, OS, or device type,
+          the agent score increases to <strong>1.0</strong>. A version-only change
+          (same browser, updated version) receives a partial score of <strong id="v-only">…</strong>.
+        </p>
+      </div>
+
+      <div class="signal-card">
+        <div class="signal-badge badge-network">Network</div>
+        <h4>Network Similarity</h4>
+        <p>
+          Each request's source IP is compared against the session's reference client.
+          A completely different /16 network scores <strong>1.0</strong>.
+          A different /24 subnet within the same /16 scores <strong id="same16">…</strong>.
+          A new address within the same /24 scores <strong id="same24">…</strong>.
+          The same IP address scores <strong>0.0</strong>.
+        </p>
+      </div>
+
+      <div class="signal-card">
+        <div class="signal-badge badge-fork">Binding Fork</div>
+        <h4>Binding Fork Detection</h4>
+        <p>
+          A binding fork occurs when a client that was seen earlier in a session
+          re-appears after a <em>different</em> client has used the same session.
+          This is the strongest indicator of session replay: the attacker has the
+          session token, the legitimate client continues browsing, and the request
+          pattern reveals the split.
+        </p>
+
+        <!-- Visual flow -->
+        <div class="flow-diagram mt-1">
+          <div class="flow-step">Normal Client (A) → Request</div>
+          <div class="flow-arrow"></div>
+          <div class="flow-step">Session continues normally</div>
+          <div class="flow-arrow"></div>
+          <div class="flow-step warn-step">Different Client (B) → same session token</div>
+          <div class="flow-arrow"></div>
+          <div class="flow-step">Original Client (A) returns → binding fork</div>
+          <div class="flow-arrow"></div>
+          <div class="flow-step alert-step">ALERT: risk &ge; threshold</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- --------------------------------------------------------
+       DATASET ANALYSIS TAB
+  -------------------------------------------------------- -->
+  <section id="tab-datasets" class="tab-panel">
+    <h2 class="section-title">Dataset Analysis</h2>
+    <p class="section-desc">
+      Runs the existing SICA engine against the W1 (Apache) and W2 (Nginx) sample datasets.
+      Results are saved to <code>results/dataset_results.csv</code> and displayed below.
+    </p>
+
+    <button class="run-btn" id="btn-run-datasets">Run Analysis</button>
+    <div id="datasets-error"></div>
+
+    <div id="datasets-summary" class="dataset-grid" style="display:none"></div>
+
+    <div id="datasets-table-wrap" style="display:none">
+      <h3 class="section-title mt-2">Per-Session Results</h3>
+      <div class="table-wrap">
+        <table id="datasets-table">
+          <thead>
+            <tr>
+              <th>Dataset</th>
+              <th>Session ID</th>
+              <th>Requests</th>
+              <th>Simulated Hijack</th>
+              <th>Peak Risk</th>
+              <th>Result</th>
+            </tr>
+          </thead>
+          <tbody id="datasets-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- --------------------------------------------------------
+       TEST CASES TAB
+  -------------------------------------------------------- -->
+  <section id="tab-tests" class="tab-panel">
+    <h2 class="section-title">Test Cases</h2>
+    <p class="section-desc">
+      Runs the SICA test suite against <code>data/test_cases.csv</code>.
+      Each test specifies a sequence of requests and an expected outcome (ALLOW or ALERT).
+      Results are saved to <code>results/test_results.csv</code>.
+    </p>
+
+    <button class="run-btn" id="btn-run-tests">Run Tests</button>
+    <div id="tests-error"></div>
+
+    <div id="tests-summary" class="test-summary-bar" style="display:none">
+      <div class="tsb-card">
+        <div class="tsb-val" id="tst-total"></div>
+        <div class="tsb-label">Total</div>
+      </div>
+      <div class="tsb-card tsb-pass">
+        <div class="tsb-val" id="tst-passed"></div>
+        <div class="tsb-label">Passed</div>
+      </div>
+      <div class="tsb-card tsb-fail">
+        <div class="tsb-val" id="tst-failed"></div>
+        <div class="tsb-label">Failed</div>
+      </div>
+      <div class="tsb-card">
+        <div class="tsb-val" id="tst-rate"></div>
+        <div class="tsb-label">Pass Rate</div>
+      </div>
+    </div>
+
+    <div id="tests-table-wrap" style="display:none">
+      <div class="table-wrap">
+        <table id="tests-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Expected</th>
+              <th>Got</th>
+              <th>Risk</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="tests-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- --------------------------------------------------------
+       ATTACK DEMONSTRATION TAB
+  -------------------------------------------------------- -->
+  <section id="tab-demo" class="tab-panel">
+    <h2 class="section-title">Attack Demonstration</h2>
+    <div class="demo-disclaimer">
+      Controlled simulation using synthetic session requests.<br>
+      No real credentials, cookies, or network traffic are used.
+      All risk scores are computed by the actual SICA detection engine.
+    </div>
+
+    <!-- Session config -->
+    <div class="session-config">
+      <label for="inp-session-id">Demo Session</label>
+      <input type="text" id="inp-session-id" value="SID-DEMO-001" maxlength="40">
+      <span class="session-state" id="session-state">NOT STARTED</span>
+      <button class="reset-btn" id="btn-reset">New Session</button>
+    </div>
+
+    <!-- Two panels: normal user + attacker -->
+    <div class="demo-layout">
+
+      <!-- Normal user -->
+      <div class="demo-panel" id="normal-panel">
+        <h4>Legitimate Client <span class="panel-state" id="normal-state">READY</span></h4>
+        <div class="panel-role">Normal User</div>
+        <div class="panel-hint" id="normal-hint">Send the first request to establish the session baseline.</div>
+
+        <div class="form-group">
+          <label for="inp-normal-ip">IP Address</label>
+          <input type="text" id="inp-normal-ip" value="192.168.1.10" placeholder="e.g. 192.168.1.10">
+        </div>
+        <div class="form-group">
+          <label for="inp-normal-ua">Browser</label>
+          <select id="inp-normal-ua">
+            <option value="chrome">Chrome (Windows)</option>
+            <option value="chrome121">Chrome 121 (Windows)</option>
+            <option value="firefox">Firefox (Linux)</option>
+            <option value="safari">Safari (macOS)</option>
+            <option value="iphone">Safari (iPhone)</option>
+            <option value="curl">curl</option>
+          </select>
+        </div>
+        <button class="demo-btn btn-normal" id="btn-send-normal">Send Normal Request</button>
+      </div>
+
+      <!-- Attacker -->
+      <div class="demo-panel attacker-panel" id="attacker-panel">
+        <h4>Simulated Attacker <span class="panel-state" id="attacker-state">FROZEN</span></h4>
+        <div class="panel-role">Session Replay</div>
+        <div class="panel-hint" id="attacker-hint">Locked until the normal user establishes the session.</div>
+
+        <div class="form-group">
+          <label for="inp-attacker-ip">Attacker IP</label>
+          <input type="text" id="inp-attacker-ip" value="203.0.113.50" placeholder="e.g. 203.0.113.50">
+        </div>
+        <div class="form-group">
+          <label for="inp-attacker-ua">Browser</label>
+          <select id="inp-attacker-ua">
+            <option value="firefox">Firefox (Linux)</option>
+            <option value="chrome">Chrome (Windows)</option>
+            <option value="chrome121">Chrome 121 (Windows)</option>
+            <option value="safari">Safari (macOS)</option>
+            <option value="iphone">Safari (iPhone)</option>
+            <option value="curl">curl</option>
+          </select>
+        </div>
+        <button class="demo-btn btn-attacker" id="btn-send-attacker">Replay Session</button>
+      </div>
+
+    </div>
+
+    <!-- Shown when SICA raises ALERT: the session is frozen -->
+    <div class="frozen-banner" id="frozen-banner" style="display:none"></div>
+
+    <!-- Risk / verdict card -->
+    <div class="risk-card" id="risk-card">
+      <div class="risk-label">Current Session Status</div>
+      <div class="risk-verdict" id="risk-verdict">Waiting for activity</div>
+      <div class="risk-numbers">
+        <div>
+          <div style="font-size:.7rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em">Risk Score</div>
+          <div class="risk-score-val" id="risk-score"></div>
+        </div>
+        <div>
+          <div style="font-size:.7rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em">Threshold</div>
+          <div class="risk-score-val" id="risk-threshold"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Binding state -->
+    <div class="binding-card" id="binding-card" style="display:none">
+      <h4>Current Session Binding</h4>
+      <div id="binding-rows"></div>
+    </div>
+
+    <!-- Timeline -->
+    <h3 class="section-title mt-2">Request Timeline</h3>
+    <div id="timeline" class="timeline">
+      <div class="empty-state">No requests yet. Use the panels above to simulate session activity.</div>
+    </div>
+
+  </section>
+
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

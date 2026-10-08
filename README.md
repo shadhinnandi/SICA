@@ -163,9 +163,10 @@ Request 12: network change + old client returns  -> 0.3301 + 0.2981 = 0.6282
 Decision  : 0.6282 >= 0.6282                     -> ALERT
 ```
 
-After the fork the reference stays with the other client, so the victim's
-later requests (13–20) keep showing a network change (0.3301). The session was
-already alerted at request 12.
+Once a session is alerted, its reference client is frozen on the last trusted
+client (for a fork, the earlier client that came back). The victim's later
+requests (13–20) therefore score 0.0000, and any further attacker request would
+still be scored against the victim. The session stays alerted from request 12.
 
 Attacker rows reuse the timestamps of the victim rows they were copied from, so
 inside an attacked session `request_no`, not `timestamp`, gives the order.
@@ -307,3 +308,47 @@ sica/
 ## License
 
 Code: MIT License (`LICENSE`). Data: Apache 2.0 (`data/LICENSE-APACHE-2.0.txt`).
+
+## Web Dashboard
+
+A local Flask-based dashboard is included in `demo/` for presentation purposes.
+It is a visual interface over the same SICA detection engine; no detection logic
+is duplicated.
+
+**Setup (first time only):**
+
+```bash
+source .venv/bin/activate
+pip install flask
+```
+
+**Start the dashboard:**
+
+```bash
+source .venv/bin/activate
+python3 demo/app.py
+```
+
+Then open <http://127.0.0.1:8050> in a browser. This runs in the foreground, so
+closing the terminal stops it.
+
+**Keep it running after the terminal is closed:**
+
+```bash
+sh demo/dashboard.sh start    # starts in the background and opens the browser
+sh demo/dashboard.sh status   # is it running?
+sh demo/dashboard.sh stop     # stop it
+```
+
+Server output goes to `demo/dashboard.log`.
+
+The dashboard provides four sections:
+
+| Section | Description |
+|---|---|
+| **Overview** | Shows the SICA formula and detection parameters loaded from `run.py` |
+| **Dataset Analysis** | Runs `run_datasets()` and displays per-session results for W1 and W2 |
+| **Test Cases** | Runs `run_tests()` and shows pass/fail for each named test |
+| **Attack Demonstration** | Lets you feed simulated requests into the SICA engine and watch risk scores update in real time |
+
+The existing terminal interface (`python3 run.py`) continues to work unchanged.

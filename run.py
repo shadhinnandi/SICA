@@ -1,15 +1,3 @@
-"""SICA: Session Integrity and Continuity Analysis
-
-Detects possible HTTP session hijacking from server access logs.
-A session should keep the same client (network + User-Agent). When the client
-changes in the middle of a session the risk goes up, and when the risk reaches
-the threshold the session is flagged with an ALERT.
-
-    python run.py            menu
-    python run.py --data     check the W1 and W2 samples
-    python run.py --test     run the test cases
-    python run.py --manual   type in a session by hand
-"""
 import csv
 import os
 import re
@@ -153,16 +141,31 @@ def client_of(row):
 
 
 def check_session(clients):
-    """Score every request of one session. clients = [(ip, browser, version, os, device), ...]"""
+    """Score every request of one session. clients = [(ip, browser, version, os, device), ...]
+
+    Each step dict now includes:
+      agent, network, fork, risk  — per-request scores (unchanged)
+      session_alerted             — True once any request has crossed THRESHOLD
+      alert_reason                — human-readable reason for the persistent alert
+      alert_request               — 1-based index of the request that first triggered ALERT
+    """
     steps = []
     ref = last = None
     recent = []
+
+    # Persistent session-level alert state — sticky once set.
+    session_alerted = False
+    alert_reason = None
+    alert_request = None
 
     for client in clients:
         if ref is None:
             ref = last = client
             recent = [client]
-            steps.append({"agent": 0.0, "network": 0.0, "fork": 0.0, "risk": 0.0})
+            steps.append({
+                "agent": 0.0, "network": 0.0, "fork": 0.0, "risk": 0.0,
+                "session_alerted": False, "alert_reason": None, "alert_request": None,
+            })
             continue
 
         changed = client != last
@@ -171,8 +174,30 @@ def check_session(clients):
         agent = agent_score(client, ref)
         net = network_score(client, ref)
         risk = W_AGENT * agent + W_NETWORK * net + W_FORK * (1.0 if fork else 0.0)
-        steps.append({"agent": agent, "network": net, "fork": 1.0 if fork else 0.0,
-                      "risk": round(risk, 4)})
+        risk = round(risk, 4)
+
+        # --- Persistent session alert state ----------------------------
+        # The individual request risk is calculated normally.  Only AFTER
+        # that do we check whether this (or a previous) request crossed
+        # the threshold and mark the session as permanently alerted.
+        newly_alerted = not session_alerted and risk >= THRESHOLD
+        if newly_alerted:
+            session_alerted = True
+            alert_request = len(steps) + 1   # 1-based
+            if fork:
+                alert_reason = "Binding fork detected (an earlier client re-appeared after a different one used this session)"
+            else:
+                alert_reason = "Client-binding change exceeded the risk threshold"
+        # ---------------------------------------------------------------
+
+        steps.append({
+            "agent": agent, "network": net,
+            "fork": 1.0 if fork else 0.0,
+            "risk": risk,
+            "session_alerted": session_alerted,
+            "alert_reason": alert_reason,
+            "alert_request": alert_request,
+        })
 
         if changed:
             if client not in recent:
@@ -183,14 +208,21 @@ def check_session(clients):
             # A one-way move (e.g. Wi-Fi -> mobile data) is charged once and the
             # session now belongs to the new client. When an old client comes
             # back we can't tell who the owner is, so the reference stays.
-            if not fork:
+            # Once the session is alerted the reference is frozen: the client
+            # that caused the alert must not become the trusted client, or its
+            # next requests would be compared with itself and look normal.
+            if newly_alerted and fork:
+                ref = client    # the earlier client that came back
+            elif not fork and not session_alerted:
                 ref = client
 
     return steps
 
 
-def decide(risk):
-    return "ALERT" if risk >= THRESHOLD else "ALLOW"
+def decide(risk, session_alerted=False):
+    """Return ALERT if the individual risk crosses the threshold OR if the
+    session has already been flagged as compromised (persistent alert state)."""
+    return "ALERT" if (risk >= THRESHOLD or session_alerted) else "ALLOW"
 
 
 def load_sessions(path, key):
@@ -271,10 +303,23 @@ def describe(step):
            SAME_24: "Yes (new IP, same subnet)", 0.0: "No"}
     agent = {1.0: "Yes (different browser/OS/device)", VERSION_ONLY: "Yes (browser version only)",
              0.0: "No"}
-    print(f"  Network change    : {net[step['network']]}")
-    print(f"  User-agent change : {agent[step['agent']]}")
+    alerted = step.get("session_alerted", False)
+    reason  = step.get("alert_reason")
+    alert_req = step.get("alert_request")
+
+    print(f"  Network change    : {net.get(step['network'], str(step['network']))}")
+    print(f"  User-agent change : {agent.get(step['agent'], str(step['agent']))}")
     print(f"  Old client back   : {'Yes (binding fork)' if step['fork'] else 'No'}")
-    print(f"  Risk: {step['risk']:.4f}   Threshold: {THRESHOLD}   ->  {decide(step['risk'])}")
+    print(f"  Current risk      : {step['risk']:.4f}   (threshold: {THRESHOLD})")
+    if alerted:
+        indicator = " [current request above threshold]" if step['risk'] >= THRESHOLD else " [below threshold, but session is alerted]"
+        print(f"  Session status    : ALERTED (first flagged at request {alert_req}){indicator}")
+        if reason:
+            print(f"  Alert reason      : {reason}")
+        print(f"  Decision          : ALERT")
+    else:
+        print(f"  Session status    : CLEAN")
+        print(f"  Decision          : ALLOW")
 
 
 def ask(prompt):
@@ -284,41 +329,108 @@ def ask(prompt):
         return "done"
 
 
+# Valid OS and device choices for the manual CLI.
+_VALID_OS  = ["Windows", "macOS", "Linux", "Ubuntu", "Debian", "ChromeOS",
+               "Android", "iOS", "Other"]
+_VALID_DEV = ["Desktop", "Mobile", "Tablet", "Other"]
+
+
+def _ask_choice(prompt, choices, prev=None):
+    """Ask the user to pick from a list; blank reuses prev."""
+    listing = ", ".join(choices)
+    while True:
+        val = ask(f"  {prompt} [{listing}]: ")
+        if val.lower() in ("done", "q"):
+            return None        # signal caller to break
+        if val == "" and prev is not None:
+            return prev
+        # Case-insensitive match
+        match = next((c for c in choices if c.lower() == val.lower()), None)
+        if match:
+            return match
+        print(f"  Invalid value. Choose from: {listing}")
+
+
 def manual_test():
+    """Interactive CLI: collect five client-binding fields per request.
+
+    Client tuple used internally: (ip, browser, browser_version, os, device)
+    This matches the tuple produced by parse_agent() and expected by
+    check_session() / agent_score() / network_score().
+    """
     print("\nManual test: enter the requests of one session in order.")
-    print("User-Agent shortcuts: " + ", ".join(AGENTS))
-    print("Press Enter to reuse the previous value, type 'done' to finish.\n")
+    print("Enter each field separately (IP / Browser / Version / OS / Device).")
+    print("Press Enter to reuse the previous value, type 'done' or 'q' to finish.\n")
 
     sid = ask("Session ID: ") or "demo"
-    requests = []
+
+    # Each entry is already a 5-tuple: (ip, browser, version, os, device)
+    clients = []
+    prev = None   # previous 5-tuple for reuse-on-blank
+
     while True:
-        n = len(requests) + 1
+        n = len(clients) + 1
         print(f"\nRequest {n}")
-        ip = ask("  IP: ")
+
+        # --- IP ---
+        ip = ask("  IP address: ")
         if ip.lower() in ("done", "q"):
             break
         if not ip:
-            if not requests:
+            if prev is None:
                 print("  Please enter an IP address.")
                 continue
-            ip = requests[-1][0]
-        ua = ask("  User-Agent: ")
-        if ua.lower() in ("done", "q"):
+            ip = prev[0]
+
+        # --- Browser ---
+        browser_names = [b[0] for b in BROWSERS]
+        browser = _ask_choice("Browser", browser_names, prev[1] if prev else None)
+        if browser is None:
             break
-        if not ua:
-            ua = requests[-1][1] if requests else "-"
-        ua = AGENTS.get(ua.lower(), ua)
-        requests.append((ip, ua))
-        clients = [(i,) + parse_agent(u) for i, u in requests]
+
+        # --- Browser version ---
+        ver_raw = ask(f"  Browser version (major number, e.g. 121): ")
+        if ver_raw.lower() in ("done", "q"):
+            break
+        if ver_raw == "" and prev is not None:
+            ver = prev[2]
+        else:
+            ver = ver_raw.strip()
+
+        # --- OS ---
+        os_name = _ask_choice("Operating system", _VALID_OS, prev[3] if prev else None)
+        if os_name is None:
+            break
+
+        # --- Device ---
+        device = _ask_choice("Device", _VALID_DEV, prev[4] if prev else None)
+        if device is None:
+            break
+
+        client = (ip, browser, ver, os_name, device)
+        clients.append(client)
+        prev = client
+
+        # Print parsed client info
+        print(f"  Client → IP: {ip}  Browser: {browser} {ver}  OS: {os_name}  Device: {device}")
 
         if n == 1:
-            print("  First request: client recorded for this session (risk 0)")
+            print("  First request: client recorded for this session (risk 0.0000)")
+            print("  Session status: CLEAN")
+            print("  Decision: ALLOW")
         else:
-            describe(check_session(clients)[-1])
+            steps = check_session(clients)
+            describe(steps[-1])
 
-    if len(requests) > 1:
-        peak = max(s["risk"] for s in check_session(clients))
-        print(f"\nSession {sid}: {len(requests)} requests, highest risk {peak:.4f}  ->  {decide(peak)}")
+    if len(clients) > 1:
+        steps = check_session(clients)
+        peak  = max(s["risk"] for s in steps)
+        final_alerted = steps[-1].get("session_alerted", False)
+        final_decision = decide(peak, final_alerted)
+        print(f"\nSession {sid}: {len(clients)} requests")
+        print(f"  Highest individual risk : {peak:.4f}")
+        print(f"  Session status          : {'ALERTED' if final_alerted else 'CLEAN'}")
+        print(f"  Final decision          : {final_decision}")
 
 
 def show_settings():

@@ -161,7 +161,9 @@ request, in the order they happened (`request_no` order).
 5. **Update after a change:** add the client to the recent list if it is new
    (keep only the last `RECENT` = 4), set it as the last client, and, only if it
    was *not* a fork, make it the new reference (a one-way move is charged once).
-   A returning old client does not become the reference.
+   A returning old client does not become the reference. Once the session is
+   alerted the reference is frozen; if the alert was a fork, the returning
+   (earlier) client becomes the reference first.
 
 **Called by:** `run_datasets()`, `run_tests()`, `manual_test()`.
 

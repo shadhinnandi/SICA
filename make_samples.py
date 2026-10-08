@@ -1,13 +1,4 @@
-"""Build the small W1/W2 samples used by run.py from the original access logs.
 
-    python make_samples.py
-
-Takes the first 100 sessions of each log and writes one row per request with
-the client fields SICA uses. The User-Agent string is split into browser,
-browser_version (major version), operating_system and device_type with
-parse_agent() from run.py. The logs contain no real attacks, so every 5th
-session gets a simulated hijack (rows marked attack=1).
-"""
 import csv
 import os
 import re

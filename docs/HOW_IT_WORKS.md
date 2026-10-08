@@ -131,7 +131,9 @@ print on screen  +  save_csv() into results/
 
 After the risk, the session state is updated: a new client is added to the recent
 list (maximum 4), the last client is updated, and if it was a one-way move (not a
-fork) the reference moves to the new client.
+fork) the reference moves to the new client. Once the session is alerted the
+reference is frozen (for a fork alert it is set to the earlier client that came
+back), so the client that caused the alert is never trusted afterwards.
 
 ## Step 11: The risk is compared with the threshold
 

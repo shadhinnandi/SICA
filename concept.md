@@ -121,6 +121,10 @@ What happens to the reference client:
   honest move is charged only once
 - an old client comes back → the reference is **not** moved, because with two
   clients alternating we cannot tell which one is the owner
+- the session has been alerted → the reference is **frozen** on the last trusted
+  client (for a binding fork, the earlier client that came back), so the
+  attacker never becomes the reference and their next requests do not look
+  normal
 
 ## 7. Risk calculation
 
